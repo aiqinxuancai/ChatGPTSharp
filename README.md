@@ -5,7 +5,7 @@
 ## Start
 
 ```csharp
-ChatGPT chatGPT = new ChatGPT("OPENAI-KEY");
+ChatGPTClient chatGPT = new ChatGPTClient("OPENAI-KEY");
 var r = await chatGPT.SendMessage("Hello");
 var r2 = await chatGPT.SendMessage("Who are you?", r.ConversationId, r.MessageId);
 ```
