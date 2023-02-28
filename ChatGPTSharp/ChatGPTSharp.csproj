@@ -3,7 +3,20 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <Description>Not calling the real ChatGPT model, but using openai model "text-davinci-003", a simple implementation of c# that adds contextual capabilities, with capabilities close to ChatGPT.</Description>
+    <PackageProjectUrl>https://github.com/aiqinxuancai/ChatGPTSharp</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
+    <PackageTags>chatgpt;openai</PackageTags>
+    <Title>ChatGPTSharp</Title>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
