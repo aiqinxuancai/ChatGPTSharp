@@ -217,7 +217,7 @@ namespace ChatGPTSharp
             return prompt;
         }
 
-        public int GetTokenCount(string text)
+        private int GetTokenCount(string text)
         {
             text = Regex.Replace(text, "<|im_end|>", "");
             text = Regex.Replace(text, "<|im_sep|>", "");
@@ -226,7 +226,7 @@ namespace ChatGPTSharp
             return text.Length;
         }
 
-        public static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)
+        private static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)
         {
             List<Message> orderedMessages = new List<Message>();
             string currentMessageId = parentMessageId;
