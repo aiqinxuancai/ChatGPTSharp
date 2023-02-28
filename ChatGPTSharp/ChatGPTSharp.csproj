@@ -9,6 +9,7 @@
     <RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
     <PackageTags>chatgpt;openai</PackageTags>
     <Title>ChatGPTSharp</Title>
+	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.1</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
