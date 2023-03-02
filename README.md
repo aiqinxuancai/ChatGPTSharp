@@ -5,9 +5,11 @@
 ## Start
 
 ```csharp
-ChatGPTClient chatGPT = new ChatGPTClient("OPENAI-KEY");
-var r = await chatGPT.SendMessage("Hello");
-var r2 = await chatGPT.SendMessage("Who are you?", r.ConversationId, r.MessageId);
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+var msg = await client.SendMessage("Hello");
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+var msg2 = await client.SendMessage("Who are you", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 ```
 
 
