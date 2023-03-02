@@ -17,7 +17,15 @@ namespace ChatGPTSharp.Model
         public string? Role { get; set; }
         public string? Content { get; set; }
 
-        public int UsageToken { get; set; }
+        /// <summary>
+        /// only reply message
+        /// </summary>
+        public int UsageTokens { get; set; }
+
+        /// <summary>
+        /// The token count of the last requested message, a replacement for GetTokenCount implementation needed for future development.
+        /// </summary>
+        public int TotalTokens { get; set; }
     }
 
     public class ConversationResult

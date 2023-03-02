@@ -31,6 +31,8 @@ namespace ChatGPTSharp
         public string EndToken { set; get; } = "<|endoftext|>";
         public string StartToken { set; get; } = "";
 
+        
+        //public string AddSystemMessage { set; get; } = "";
 
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
 
@@ -188,7 +190,7 @@ namespace ChatGPTSharp
 
                 reply = reply?.Trim();
 
-                userMessage.UsageToken = result.SelectToken("usage.prompt_tokens").ToObject<int>();
+                //userMessage.UsageTokens = result.SelectToken("usage.prompt_tokens").ToObject<int>();
 
                 var replyMessage = new Message
                 {
@@ -196,7 +198,8 @@ namespace ChatGPTSharp
                     ParentMessageId = userMessage.Id,
                     Role = "ChatGPT",
                     Content = reply,
-                    UsageToken = result.SelectToken("usage.completion_tokens").ToObject<int>(),
+                    UsageTokens = result.SelectToken("usage.completion_tokens").ToObject<int>(),
+                    TotalTokens = result.SelectToken("usage.total_tokens").ToObject<int>(),
                 };
 
                 conversation.Messages.Add(replyMessage);
