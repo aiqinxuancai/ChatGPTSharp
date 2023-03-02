@@ -5,6 +5,7 @@ Console.WriteLine("Hello, World!");
 
 //Test "gpt-3.5-turbo"
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+client.IsDebug = true;
 var msg = await client.SendMessage("Hello");
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 var msg2 = await client.SendMessage("Who are you", msg.ConversationId, msg.MessageId);

@@ -16,6 +16,8 @@ namespace ChatGPTSharp.Model
         public string? ParentMessageId { get; set; }
         public string? Role { get; set; }
         public string? Content { get; set; }
+
+        public int UsageToken { get; set; }
     }
 
     public class ConversationResult

@@ -50,10 +50,11 @@ namespace ChatGPTSharp
         public ChatGPTClient(string openaiToken, string modelName = "gpt-3.5-turbo", string proxyUri = "")
         {
             _isUnofficialChatGptModel = _model.StartsWith("text-chat") || _model.StartsWith("text-davinci-002-render");
+            _model = modelName;
             _isChatGptModel = _model.StartsWith("gpt-3.5-turbo");
             _openAIToken = openaiToken;
             _proxyUri = proxyUri;
-            _model = modelName;
+            
 
             if (_isChatGptModel)
             {
@@ -187,6 +188,7 @@ namespace ChatGPTSharp
 
                 reply = reply?.Trim();
 
+                userMessage.UsageToken = result.SelectToken("usage.prompt_tokens").ToObject<int>();
 
                 var replyMessage = new Message
                 {
@@ -194,6 +196,7 @@ namespace ChatGPTSharp
                     ParentMessageId = userMessage.Id,
                     Role = "ChatGPT",
                     Content = reply,
+                    UsageToken = result.SelectToken("usage.completion_tokens").ToObject<int>(),
                 };
 
                 conversation.Messages.Add(replyMessage);
@@ -214,7 +217,7 @@ namespace ChatGPTSharp
                 if (IsDebug)
                 {
                     Console.WriteLine(ex);
-                    Debug.WriteLine(ex);
+                    Debug.WriteLine(ex.ToString());
                 }
                 
                 return null;
@@ -344,6 +347,7 @@ namespace ChatGPTSharp
            
             var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
             string systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
+            int systemMessageTokenCount = 33;
 
             var payload = new List<JObject>();
 
@@ -390,11 +394,11 @@ namespace ChatGPTSharp
 
             if (systemMessage != null)
             {
-                payload.Insert(payload.Count - 1, new JObject()
-                {
-                    {"role", "system"},
-                    {"content", systemMessage}
-                });
+                //payload.Insert(payload.Count - 1, new JObject()
+                //{
+                //    {"role", "system"},
+                //    {"content", systemMessage}
+                //});
             }
 
             return payload;
