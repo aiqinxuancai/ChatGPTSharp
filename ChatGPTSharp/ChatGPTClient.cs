@@ -19,7 +19,7 @@ namespace ChatGPTSharp
 {
     public class ChatGPTClient
     {
-        private Dictionary<string, Conversation> ConversationsCache = new Dictionary<string, Conversation>();
+       
 
         public int MaxContextTokens { set; get; } = 4097;
         public int MaxResponseTokens { set; get; } = 1024;
@@ -31,6 +31,9 @@ namespace ChatGPTSharp
         public bool IsDebug { set; get; }
         public string EndToken { set; get; } = "<|endoftext|>";
         public string StartToken { set; get; } = "";
+
+
+        private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
 
         private string _model = "text-davinci-003";
         private string[] _stop = { };
@@ -105,71 +108,30 @@ namespace ChatGPTSharp
 
         }
 
-        public async Task<(JObject result, string source)> PostData(object obj)
+        
+
+        /// <summary>
+        /// clear conversation
+        /// </summary>
+        /// <param name="conversationId"></param>
+        /// <returns></returns>
+        public bool RemoveConversationId(string conversationId)
         {
-            var httpClientHandler = new HttpClientHandler();
-
-            if (!string.IsNullOrEmpty(_proxyUri))
+            if (_conversationsCache.ContainsKey(conversationId))
             {
-                WebProxy proxy = new WebProxy(_proxyUri);
-
-                httpClientHandler.Proxy = proxy;
-                httpClientHandler.UseProxy = true;
+                _conversationsCache.Remove(conversationId);
+                return true;
             }
-
-            HttpClient client = new HttpClient(httpClientHandler);
-            client.Timeout = TimeSpan.FromSeconds(20);
-
-            string uri = "https://api.openai.com/v1/completions";
-            if (_isChatGptModel)
-            {
-                uri = "https://api.openai.com/v1/chat/completions";
-            }
-
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_openAIToken}");
-
-            JObject req = new JObject();
-            req["model"] = _model;
-            req["temperature"] = 0.8;
-            req["top_p"] = 1;
-            req["presence_penalty"] = 1;
-
-            //req["max_tokens"] = 1024;
-            //req["frequency_penalty"] = 0;
-
-            if (_isChatGptModel)
-            {
-                req["messages"] = new JArray(((List<JObject >)obj).ToArray());
-            }
-            else
-            {
-                req["prompt"] = (string)obj;
-                req["stop"] = new JArray(_stop);
-            }
-
-            var jsonString = req.ToString();
-
-            if (IsDebug)
-            {
-                Console.WriteLine(jsonString);
-            }
-  
-            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(uri, content);
-
-
-            var resultJsonString = await response.Content.ReadAsStringAsync();
-            response.EnsureSuccessStatusCode();
-            if (IsDebug) { 
-                Console.WriteLine(resultJsonString);
-            }
-
-            JObject result = JObject.Parse(resultJsonString);
-            return (result, resultJsonString);
+            return false;
         }
 
-
-
+        /// <summary>
+        /// send message
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="conversationId"></param>
+        /// <param name="parentMessageId"></param>
+        /// <returns></returns>
         public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "")
         {
             try
@@ -177,7 +139,7 @@ namespace ChatGPTSharp
                 conversationId = !string.IsNullOrEmpty(conversationId) ? conversationId : Guid.NewGuid().ToString();
                 parentMessageId = !string.IsNullOrEmpty(parentMessageId) ? parentMessageId : Guid.NewGuid().ToString();
 
-                ConversationsCache.TryGetValue(conversationId, out Conversation conversation);
+                _conversationsCache.TryGetValue(conversationId, out Conversation conversation);
                 if (conversation == null)
                 {
                     conversation = new Conversation
@@ -237,7 +199,7 @@ namespace ChatGPTSharp
 
                 conversation.Messages.Add(replyMessage);
 
-                ConversationsCache[conversationId] = conversation;
+                _conversationsCache[conversationId] = conversation;
 
                 return new ConversationResult()
                 {
@@ -260,7 +222,69 @@ namespace ChatGPTSharp
             }
 
         }
+        private async Task<(JObject result, string source)> PostData(object obj)
+        {
+            var httpClientHandler = new HttpClientHandler();
 
+            if (!string.IsNullOrEmpty(_proxyUri))
+            {
+                WebProxy proxy = new WebProxy(_proxyUri);
+
+                httpClientHandler.Proxy = proxy;
+                httpClientHandler.UseProxy = true;
+            }
+
+            HttpClient client = new HttpClient(httpClientHandler);
+            client.Timeout = TimeSpan.FromSeconds(20);
+
+            string uri = "https://api.openai.com/v1/completions";
+            if (_isChatGptModel)
+            {
+                uri = "https://api.openai.com/v1/chat/completions";
+            }
+
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_openAIToken}");
+
+            JObject req = new JObject();
+            req["model"] = _model;
+            req["temperature"] = 0.8;
+            req["top_p"] = 1;
+            req["presence_penalty"] = 1;
+
+            //req["max_tokens"] = 1024;
+            //req["frequency_penalty"] = 0;
+
+            if (_isChatGptModel)
+            {
+                req["messages"] = new JArray(((List<JObject>)obj).ToArray());
+            }
+            else
+            {
+                req["prompt"] = (string)obj;
+                req["stop"] = new JArray(_stop);
+            }
+
+            var jsonString = req.ToString();
+
+            if (IsDebug)
+            {
+                Console.WriteLine(jsonString);
+            }
+
+            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(uri, content);
+
+
+            var resultJsonString = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+            if (IsDebug)
+            {
+                Console.WriteLine(resultJsonString);
+            }
+
+            JObject result = JObject.Parse(resultJsonString);
+            return (result, resultJsonString);
+        }
         private string BuildPrompt(List<Message> messages, string parentMessageId)
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
