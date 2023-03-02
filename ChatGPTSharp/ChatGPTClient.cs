@@ -397,11 +397,11 @@ namespace ChatGPTSharp
 
             if (systemMessage != null)
             {
-                //payload.Insert(payload.Count - 1, new JObject()
-                //{
-                //    {"role", "system"},
-                //    {"content", systemMessage}
-                //});
+                payload.Insert(payload.Count - 1, new JObject()
+                {
+                    {"role", "system"},
+                    {"content", systemMessage}
+                });
             }
 
             return payload;
