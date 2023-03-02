@@ -1,6 +1,6 @@
 # ChatGPTSharp
 
-**Not calling the real ChatGPT model**, but using openai model "text-davinci-003", a simple implementation of c# that adds contextual capabilities, with capabilities close to ChatGPT.
+This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.
 
 ## Start
 
