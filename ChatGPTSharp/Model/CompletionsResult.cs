@@ -5,7 +5,7 @@ using System.Text;
 
 namespace ChatGPTSharp.Model
 {
-    public partial class Result
+    public partial class CompletionsResult
     {
         [JsonProperty("id")]
         public string Id { get; set; }

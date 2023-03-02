@@ -10,6 +10,10 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Xml.Linq;
 using ChatGPTSharp.Model;
+using System.Globalization;
+using System.Data;
+using ChatGPTSharp.Model.ChatCompletions;
+using System.Net;
 
 namespace ChatGPTSharp
 {
@@ -24,39 +28,152 @@ namespace ChatGPTSharp
         public string ChatGptLabel { set; get; } = "ChatGPT";
         public string Model { set; get; } = "text-davinci-003";
 
+        public string CompletionsUrl { set; get; } = "";
+
+
         private string EndToken { set; get; } = "<|endoftext|>";
-        private string SeparatorToken { set; get; } = "";
+        private string StartToken { set; get; } = "";
+
+        
 
         private string[] Stop { set; get; } = { };
 
         private string OpenAIToken { set; get; } = "";
 
-        public ChatGPTClient(string openaiToken)
+
+        private bool IsChatGptModel { set; get; }
+        private bool IsUnofficialChatGptModel { set; get; }
+        private int MessageTokenOffset { set; get; } = 7;
+        
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="openaiToken"></param>
+        /// <param name="modelName">text-davinci-003、gpt-3.5-turbo</param>
+        public ChatGPTClient(string openaiToken, string modelName = "text-davinci-003")
         {
             OpenAIToken = openaiToken;
-            var isChatGptModel = Model.StartsWith("text-chat") || Model.StartsWith("text-davinci-002-render");
+            Model = modelName;
+            this.IsUnofficialChatGptModel = Model.StartsWith("text-chat") || Model.StartsWith("text-davinci-002-render");
+
+
+            var isChatGptModel = Model.StartsWith("gpt-3.5-turbo");
+            IsChatGptModel = isChatGptModel;
+            if (isChatGptModel)
+            {
+                if (this.UserLabel.ToLower() == "user")
+                {
+                    this.UserLabel = null;
+                }
+                if (this.ChatGptLabel.ToLower() == "assistant")
+                {
+                    this.ChatGptLabel = null;
+                }
+            }
 
             if (isChatGptModel)
             {
+                this.StartToken = "";
+                this.EndToken = "";
+            }
+            else if (IsUnofficialChatGptModel)
+            {
+                this.StartToken = "<|im_start|>";
                 this.EndToken = "<|im_end|>";
-                this.SeparatorToken = "<|im_sep|>";
             }
             else
             {
-                this.EndToken = "<|endoftext|>";
-                this.SeparatorToken = this.EndToken;
+                this.StartToken = "<|endoftext|>";
+                this.EndToken = this.StartToken;
             }
+
+            if (!isChatGptModel)
+            {
+                if (IsUnofficialChatGptModel)
+                {
+                    Stop = new string[] { this.EndToken, this.StartToken, $"\n${this.UserLabel}:" };
+                }
+                else
+                {
+                    Stop = new string[] { this.EndToken, $"\n{this.UserLabel}:" };
+                }
+            }
+
 
             if (isChatGptModel)
             {
-                Stop = new string[] { this.EndToken, this.SeparatorToken, $"\n${this.UserLabel}:" };
+                this.CompletionsUrl = "https://api.openai.com/v1/chat/completions";
             }
             else
             {
-                Stop = new string[] { this.EndToken, $"\n{this.UserLabel}:" };
+                this.CompletionsUrl = "https://api.openai.com/v1/completions";
             }
 
         }
+
+        public async Task<(JObject result, string source)> PostData(object obj)
+        {
+            // 创建代理
+            var proxy = new WebProxy("http://127.0.0.1:1081");
+
+            // 创建 HttpClientHandler 对象，并设置代理
+            var httpClientHandler = new HttpClientHandler
+            {
+                Proxy = proxy,
+                UseProxy = true
+            };
+            HttpClient client = new HttpClient(httpClientHandler);
+            client.Timeout = TimeSpan.FromSeconds(20);
+
+            string uri = "https://api.openai.com/v1/completions";
+            if (IsChatGptModel)
+            {
+                uri = "https://api.openai.com/v1/chat/completions";
+            }
+
+            // Request headers.
+            client.DefaultRequestHeaders.Add(
+                "Authorization", $"Bearer {OpenAIToken}");
+
+            JObject req = new JObject();
+            req["model"] = Model;
+
+            //req["max_tokens"] = 1024;
+            req["temperature"] = 0.8;
+            req["top_p"] = 1;
+            //req["frequency_penalty"] = 0;
+            req["presence_penalty"] = 1;
+
+
+            if (IsChatGptModel)
+            {
+                req["messages"] = new JArray(((List<JObject >)obj).ToArray());
+            }
+            else
+            {
+                req["prompt"] = (string)obj;
+                req["stop"] = new JArray(Stop);
+            }
+
+
+            var jsonString = req.ToString();
+
+            Console.WriteLine(jsonString);
+
+            var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(uri, content);
+
+
+            var resultJsonString = await response.Content.ReadAsStringAsync();
+            response.EnsureSuccessStatusCode();
+
+            Console.WriteLine(resultJsonString);
+            //var reply = string.Empty;
+            JObject result = JObject.Parse(resultJsonString);
+            return (result, resultJsonString);
+        }
+
 
 
         public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "")
@@ -86,49 +203,32 @@ namespace ChatGPTSharp
 
                 conversation.Messages.Add(userMessage);
 
+                JObject result = new JObject();
+                var reply = string.Empty;
+                var resultJsonString = string.Empty;
+                
+                if (IsChatGptModel)
+                {
+                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id);
+                    var data = await PostData(messages);
+                    result = data.result;
+                    reply = (string)result.SelectToken("choices[0].message.content");
+                    resultJsonString = data.source;
+                }
+                else
+                {
+                    string prompt = BuildPrompt(conversation.Messages, userMessage.Id);
+                    var data = await PostData(prompt);
+                    result = data.result;
+                    reply = (string)result.SelectToken("choices[0].text");
+                    resultJsonString = data.source;
+                }
 
-                var prompt = BuildPrompt(conversation.Messages, userMessage.Id);
-
-                HttpClient client = new HttpClient();
-                client.Timeout = TimeSpan.FromSeconds(20);
-                string uri = "https://api.openai.com/v1/completions";
-
-                // Request headers.
-                client.DefaultRequestHeaders.Add(
-                    "Authorization", $"Bearer {OpenAIToken}");
-
-                JObject req = new JObject();
-                req["model"] = Model;
-                req["prompt"] = prompt;
-                req["max_tokens"] = 1024;
-                req["temperature"] = 0.8;
-                req["top_p"] = 1;
-                //req["frequency_penalty"] = 0;
-                req["presence_penalty"] = 1;
-                req["stop"] = new JArray(Stop);
-
-                var jsonString = req.ToString();
-
-                Console.WriteLine(jsonString);
-
-                var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(uri, content);
-                response.EnsureSuccessStatusCode();
-
-                var resultJsonString = await response.Content.ReadAsStringAsync();
-
-                Console.WriteLine(resultJsonString);
-
-
-                Result result = JsonConvert.DeserializeObject<Result>(resultJsonString);
-
-                var reply = result.Choices[0].Text;
                 //存储
                 if (!string.IsNullOrEmpty(this.EndToken))
                 {
                     reply = reply.Replace(this.EndToken, "");
                 }
-
 
                 reply = reply.Trim();
 
@@ -141,11 +241,9 @@ namespace ChatGPTSharp
                     Content = reply,
                 };
 
-
                 conversation.Messages.Add(replyMessage);
 
-
-                //this.ConversationsCache[conversationId] = conversation;
+                ConversationsCache[conversationId] = conversation;
 
                 return new ConversationResult()
                 {
@@ -168,10 +266,10 @@ namespace ChatGPTSharp
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
             var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
-            string promptPrefix = $"\n{SeparatorToken}Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}{SeparatorToken}\n\n";
+            string promptPrefix = $"\n{StartToken}Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}{StartToken}\n\n";
 
             var promptSuffix = $"{ChatGptLabel}:\n";
-            var currentTokenCount = GetTokenCount($"{promptPrefix}{promptSuffix}");
+            var currentTokenCount = GetTokenCount($"{promptPrefix}{promptSuffix}"); //TODO
             var promptBody = string.Empty;
             var maxTokenCount = MaxPromptTokens;
 
@@ -216,6 +314,70 @@ namespace ChatGPTSharp
 
             return prompt;
         }
+
+        public List<JObject> BuildChatPayload(List<Message> messages, string parentMessageId)
+        {
+            var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
+
+           
+            var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
+            string systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
+
+            var payload = new List<JObject>();
+
+            bool isFirstMessage = true;
+            int currentTokenCount = systemMessage != null ? (this.GetTokenCount(systemMessage) + this.MessageTokenOffset) : 0;
+            int maxTokenCount = this.MaxPromptTokens;
+            // Iterate backwards through the messages, adding them to the prompt until we reach the max token count.
+            while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
+            {
+                var message = orderedMessages.Last();
+                orderedMessages.Remove(message);
+
+                string messageString = message.Content;
+                if (message.Role == "User")
+                {
+                    if (this.UserLabel != null)
+                    {
+                        messageString = $"{this.UserLabel}:\n{messageString}";
+                    }
+                    if (this.ChatGptLabel != null)
+                    {
+                        messageString = $"{messageString}\n{this.ChatGptLabel}:\n";
+                    }
+                }
+
+                int newTokenCount = this.GetTokenCount(messageString) + currentTokenCount + this.MessageTokenOffset;
+                if (newTokenCount > maxTokenCount)
+                {
+                    if (!isFirstMessage)
+                    {
+                        break;
+                    }
+                    throw new Exception($"Prompt is too long. Max token count is {maxTokenCount}, but prompt is {newTokenCount} tokens long.");
+                }
+
+                payload.Insert(0, new JObject()
+                {
+                    { "role" , message.Role == "User" ? "user" : "assistant" },
+                    {"content" , messageString }
+                });
+                isFirstMessage = false;
+                currentTokenCount = newTokenCount;
+            }
+
+            if (systemMessage != null)
+            {
+                payload.Insert(payload.Count - 1, new JObject()
+                {
+                    {"role", "system"},
+                    {"content", systemMessage}
+                });
+            }
+
+            return payload;
+        }
+
 
         private int GetTokenCount(string text)
         {
