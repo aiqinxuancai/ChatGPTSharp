@@ -156,7 +156,7 @@ namespace ChatGPTSharp
                     Content = message,
                 };
 
-                conversation?.Messages?.Add(userMessage);
+                conversation.Messages.Add(userMessage);
 
                 JObject result = new JObject();
                 string? reply = string.Empty;
@@ -164,7 +164,7 @@ namespace ChatGPTSharp
                 
                 if (_isChatGptModel)
                 {
-                    List<JObject> messages = BuildChatPayload(conversation!.Messages, userMessage.Id);
+                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id);
                     var data = await PostData(messages);
                     result = data.result;
                     reply = (string?)result.SelectToken("choices[0].message.content");
@@ -172,7 +172,7 @@ namespace ChatGPTSharp
                 }
                 else
                 {
-                    string prompt = BuildPrompt(conversation!.Messages, userMessage.Id);
+                    string prompt = BuildPrompt(conversation.Messages, userMessage.Id);
                     var data = await PostData(prompt);
                     result = data.result;
                     reply = (string?)result.SelectToken("choices[0].text");
