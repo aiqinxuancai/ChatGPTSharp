@@ -12,7 +12,6 @@ using System.Xml.Linq;
 using ChatGPTSharp.Model;
 using System.Globalization;
 using System.Data;
-using ChatGPTSharp.Model.ChatCompletions;
 using System.Net;
 
 namespace ChatGPTSharp
@@ -24,8 +23,8 @@ namespace ChatGPTSharp
         public int MaxContextTokens { set; get; } = 4097;
         public int MaxResponseTokens { set; get; } = 1024;
         public int MaxPromptTokens { set; get; } = 3073;
-        public string UserLabel { set; get; } = "User";
-        public string ChatGptLabel { set; get; } = "ChatGPT";
+        public string? UserLabel { set; get; } = "User";
+        public string? ChatGptLabel { set; get; } = "ChatGPT";
         
         public string CompletionsUrl { set; get; } = "";
         public bool IsDebug { set; get; }
@@ -157,36 +156,36 @@ namespace ChatGPTSharp
                     Content = message,
                 };
 
-                conversation.Messages.Add(userMessage);
+                conversation?.Messages?.Add(userMessage);
 
                 JObject result = new JObject();
-                var reply = string.Empty;
+                string? reply = string.Empty;
                 var resultJsonString = string.Empty;
                 
                 if (_isChatGptModel)
                 {
-                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id);
+                    List<JObject> messages = BuildChatPayload(conversation!.Messages, userMessage.Id);
                     var data = await PostData(messages);
                     result = data.result;
-                    reply = (string)result.SelectToken("choices[0].message.content");
+                    reply = (string?)result.SelectToken("choices[0].message.content");
                     resultJsonString = data.source;
                 }
                 else
                 {
-                    string prompt = BuildPrompt(conversation.Messages, userMessage.Id);
+                    string prompt = BuildPrompt(conversation!.Messages, userMessage.Id);
                     var data = await PostData(prompt);
                     result = data.result;
-                    reply = (string)result.SelectToken("choices[0].text");
+                    reply = (string?)result.SelectToken("choices[0].text");
                     resultJsonString = data.source;
                 }
 
                 //存储
                 if (!string.IsNullOrEmpty(EndToken))
                 {
-                    reply = reply.Replace(EndToken, "");
+                    reply = reply?.Replace(EndToken, "");
                 }
 
-                reply = reply.Trim();
+                reply = reply?.Trim();
 
 
                 var replyMessage = new Message
@@ -357,7 +356,7 @@ namespace ChatGPTSharp
                 var message = orderedMessages.Last();
                 orderedMessages.Remove(message);
 
-                string messageString = message.Content;
+                string? messageString = message.Content;
                 if (message.Role == "User")
                 {
                     if (UserLabel != null)
@@ -370,7 +369,7 @@ namespace ChatGPTSharp
                     }
                 }
 
-                int newTokenCount = GetTokenCount(messageString) + currentTokenCount + _messageTokenOffset;
+                int newTokenCount = GetTokenCount(messageString!) + currentTokenCount + _messageTokenOffset;
                 if (newTokenCount > maxTokenCount)
                 {
                     if (!isFirstMessage)
@@ -414,7 +413,7 @@ namespace ChatGPTSharp
         private static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)
         {
             List<Message> orderedMessages = new List<Message>();
-            string currentMessageId = parentMessageId;
+            string? currentMessageId = parentMessageId;
             while (currentMessageId != null)
             {
                 Message message = messages.Find(m => m.Id == currentMessageId);
