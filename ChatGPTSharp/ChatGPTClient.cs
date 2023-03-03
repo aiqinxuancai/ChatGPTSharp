@@ -427,8 +427,8 @@ namespace ChatGPTSharp
             text = Regex.Replace(text, "<|im_end|>", "");
             text = Regex.Replace(text, "<|im_sep|>", "");
             //TODO gptEncode(text).length;
- 
-            return GPT3Token.Encode(text).Count;
+            //return GPT3Token.Encode(text).Count;
+            return text.Length;
         }
 
         private static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)
