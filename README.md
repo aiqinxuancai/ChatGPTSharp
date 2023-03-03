@@ -3,7 +3,7 @@
 This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.
 
 
-[Chinese](README_CN.md)
+[жпнд](README_CN.md)
 
 ## Update
 ### 1.0.5 20230303
