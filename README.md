@@ -6,19 +6,10 @@ This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous g
 [Chinese](README_CN.md)
 
 ## Update
-
-
-
 ### 1.0.5 20230303
 * Add SendMessage parameters sendSystemType and sendSystemMessage to specify the insertion of system messages into the conversation.
-
 ### 1.0.3 20230302
 * Add local token algorithm of gpt3, the algorithm is from js library gpt-3-encoder
-
-
-## Update 
-
-
 
 ## Start
 
