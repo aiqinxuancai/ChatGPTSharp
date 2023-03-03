@@ -1,24 +1,16 @@
 # ChatGPTSharp
 
-This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.
+这个项目支持真正的ChatGPT模型 "gpt-3.5-turbo"，以及上一代模型 "text-davinci-003"，两者都具有连续对话能力。
 
-
-[Chinese](README_CN.md)
+后续可能会移除旧model的支持
 
 ## Update
 
-
-
 ### 1.0.5 20230303
-* Add SendMessage parameters sendSystemType and sendSystemMessage to specify the insertion of system messages into the conversation.
+* 增加SendMessage的参数sendSystemType和sendSystemMessage，用于指定在对话中插入system消息。
 
-### 1.0.3 20230302
-* Add local token algorithm of gpt3, the algorithm is from js library gpt-3-encoder
-
-
-## Update 
-
-
+### 1.0.4 20230302
+* 增加gpt3的本地token算法，算法来自js库gpt-3-encoder
 
 ## Start
 
