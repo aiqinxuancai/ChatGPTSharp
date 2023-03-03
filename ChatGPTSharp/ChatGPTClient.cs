@@ -35,7 +35,6 @@ namespace ChatGPTSharp
 
 
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
-
         private string _model = "text-davinci-003";
         private string[] _stop = { };
         private string _openAIToken = string.Empty;
@@ -138,9 +137,10 @@ namespace ChatGPTSharp
         /// <param name="message"></param>
         /// <param name="conversationId"></param>
         /// <param name="parentMessageId"></param>
-        /// <param name="sendSystemMessage">only gpt-3.5-turbo, see https://platform.openai.com/docs/guides/chat</param>
+        /// <param name="sendSystemType">only gpt-3.5-turbo</param>
+        /// <param name="sendSystemMessage">only gpt-3.5-turbo, need SendSystemType.Custom, see https://platform.openai.com/docs/guides/chat </param>
         /// <returns></returns>
-        public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "", string sendSystemMessage = "")
+        public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "", SendSystemType sendSystemType = SendSystemType.None, string sendSystemMessage = "")
         {
             try
             {
@@ -173,7 +173,7 @@ namespace ChatGPTSharp
                 
                 if (_isChatGptModel)
                 {
-                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id, sendSystemMessage);
+                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id, sendSystemType, sendSystemMessage);
                     var data = await PostData(messages);
                     result = data.result;
                     reply = (string?)result.SelectToken("choices[0].message.content");
@@ -228,8 +228,8 @@ namespace ChatGPTSharp
                     Console.WriteLine(ex);
                     Debug.WriteLine(ex.ToString());
                 }
-                
-                return null;
+
+                throw;
             }
 
         }
@@ -350,18 +350,21 @@ namespace ChatGPTSharp
             return prompt;
         }
 
-        public List<JObject> BuildChatPayload(List<Message> messages, string parentMessageId, string sendSystemMessage = "")
+        public List<JObject> BuildChatPayload(List<Message> messages, string parentMessageId, SendSystemType sendSystemType = SendSystemType.None, string sendSystemMessage = "")
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
 
             string systemMessage = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(sendSystemMessage))
+            if (sendSystemType == SendSystemType.BaseMessage)
+            {
+                var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
+                systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
+            } 
+            else if (sendSystemType == SendSystemType.Custom && !string.IsNullOrWhiteSpace(sendSystemMessage))
             {
                 systemMessage = sendSystemMessage;
             }
-            //var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
-            //systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
 
             var payload = new List<JObject>();
 
@@ -406,7 +409,6 @@ namespace ChatGPTSharp
                 currentTokenCount = newTokenCount;
             }
 
-            //
             if (!string.IsNullOrEmpty(systemMessage))
             {
                 payload.Insert(payload.Count - 1, new JObject()

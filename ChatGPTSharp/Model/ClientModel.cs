@@ -4,7 +4,23 @@ using System.Text;
 
 namespace ChatGPTSharp.Model
 {
+    public enum SendSystemType
+    {
+        /// <summary>
+        /// dont send
+        /// </summary>
+        None,
 
+        /// <summary>
+        /// send "You are ChatGPT, a large language model trained by OpenAI.Current date: time"
+        /// </summary>
+        BaseMessage,
+
+        /// <summary>
+        /// Custom
+        /// </summary>
+        Custom
+    }
 
     public class Conversation
     {
