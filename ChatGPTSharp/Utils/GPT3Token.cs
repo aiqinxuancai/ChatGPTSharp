@@ -25,12 +25,12 @@ namespace ChatGPTSharp.Utils
 
         static GPT3Token()
         {
-            encoder = JsonConvert.DeserializeObject<Dictionary<string, int>>(ResHelper.GetTokenResString("encoder"));
+            encoder = JsonConvert.DeserializeObject<Dictionary<string, int>>(GetTokenResString("encoder"))!;
             decoder = encoder.ToDictionary(x => x.Value, x => x.Key);
             byte_encoder = BytesToUnicode();
             byte_decoder = byte_encoder.ToDictionary(x => x.Value, x => x.Key);
 
-            string bpe_file = ResHelper.GetTokenResString("vocab");
+            string bpe_file = GetTokenResString("vocab");
 
             string[] lines = bpe_file.Split('\n');
 
@@ -59,9 +59,15 @@ namespace ChatGPTSharp.Utils
             }
             return result;
         }
+        private static string GetTokenResString(string name)
+        {
+            var jsonString = string.Empty;
 
+            var stream = (byte[])TokenResource.ResourceManager.GetObject(name); ;
+            return UTF8Encoding.UTF8.GetString(stream);
+        }
 
-        static HashSet<string[]> GetPairs(List<string> word)
+        private static HashSet<string[]> GetPairs(List<string> word)
         {
             var pairs = new HashSet<string[]>();
             var prevChar = word[0];
@@ -74,34 +80,34 @@ namespace ChatGPTSharp.Utils
             return pairs;
         }
 
-        static int[] Range(int x, int y)
+        private static int[] Range(int x, int y)
         {
             return Enumerable.Range(x, y - x).ToArray();
         }
 
-        static int Ord(char x)
+        private static int Ord(char x)
         {
             return Convert.ToInt32(x);
         }
 
-        static char Chr(int x)
+        private static char Chr(int x)
         {
             return Convert.ToChar(x);
         }
 
-        static int[] EncodeStr(string str)
+        private static int[] EncodeStr(string str)
         {
             var textEncoder = Encoding.UTF8;
             return textEncoder.GetBytes(str).Select(x => Convert.ToInt32(x)).ToArray();
         }
 
-        static string DecodeStr(int[] arr)
+        private static string DecodeStr(int[] arr)
         {
             var textDecoder = Encoding.UTF8;
             return textDecoder.GetString(arr.Select(x => Convert.ToByte(x)).ToArray());
         }
 
-        static Dictionary<int, char> BytesToUnicode()
+        private static Dictionary<int, char> BytesToUnicode()
         {
             List<int> bs = Enumerable.Range((int)'!', (int)'~' - (int)'!' + 1)
                 .Concat(Enumerable.Range((int)'¡', (int)'¬' - (int)'¡' + 1))
