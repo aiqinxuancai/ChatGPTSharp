@@ -4,6 +4,8 @@ using System.Text;
 
 namespace ChatGPTSharp.Model
 {
+
+
     public class Conversation
     {
         public List<Message> Messages { get; set; } = new List<Message>();

@@ -13,26 +13,26 @@ using ChatGPTSharp.Model;
 using System.Globalization;
 using System.Data;
 using System.Net;
+using ChatGPTSharp.Utils;
 
 namespace ChatGPTSharp
 {
+
+    
+
     public class ChatGPTClient
     {
-       
-
         public int MaxContextTokens { set; get; } = 4097;
         public int MaxResponseTokens { set; get; } = 1024;
         public int MaxPromptTokens { set; get; } = 3073;
-        public string? UserLabel { set; get; } = "User";
-        public string? ChatGptLabel { set; get; } = "ChatGPT";
+        public string? UserLabel { set; get; } = "user";
+        public string? ChatGptLabel { set; get; } = "assistant";
         
         public string CompletionsUrl { set; get; } = "";
         public bool IsDebug { set; get; }
         public string EndToken { set; get; } = "<|endoftext|>";
         public string StartToken { set; get; } = "";
 
-        
-        //public string AddSystemMessage { set; get; } = "";
 
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
 
@@ -60,14 +60,18 @@ namespace ChatGPTSharp
 
             if (_isChatGptModel)
             {
-                if (UserLabel.ToLower() == "user")
-                {
-                    UserLabel = null;
-                }
-                if (ChatGptLabel.ToLower() == "assistant")
-                {
-                    ChatGptLabel = null;
-                }
+                //if (UserLabel.ToLower() == "user")
+                //{
+                //    UserLabel = null;
+                //}
+                //if (ChatGptLabel.ToLower() == "assistant")
+                //{
+                //    ChatGptLabel = null;
+                //}
+
+                //gpt-3.5-turbo 
+                UserLabel = null;
+                ChatGptLabel = null;
             }
 
             if (_isChatGptModel)
@@ -127,14 +131,16 @@ namespace ChatGPTSharp
             return false;
         }
 
+
         /// <summary>
-        /// send message
+        /// SendMessage
         /// </summary>
         /// <param name="message"></param>
         /// <param name="conversationId"></param>
         /// <param name="parentMessageId"></param>
+        /// <param name="sendSystemMessage">only gpt-3.5-turbo, see https://platform.openai.com/docs/guides/chat</param>
         /// <returns></returns>
-        public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "")
+        public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "", string sendSystemMessage = "")
         {
             try
             {
@@ -167,7 +173,7 @@ namespace ChatGPTSharp
                 
                 if (_isChatGptModel)
                 {
-                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id);
+                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id, sendSystemMessage);
                     var data = await PostData(messages);
                     result = data.result;
                     reply = (string?)result.SelectToken("choices[0].message.content");
@@ -290,6 +296,7 @@ namespace ChatGPTSharp
             JObject result = JObject.Parse(resultJsonString);
             return (result, resultJsonString);
         }
+
         private string BuildPrompt(List<Message> messages, string parentMessageId)
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
@@ -343,14 +350,18 @@ namespace ChatGPTSharp
             return prompt;
         }
 
-        public List<JObject> BuildChatPayload(List<Message> messages, string parentMessageId)
+        public List<JObject> BuildChatPayload(List<Message> messages, string parentMessageId, string sendSystemMessage = "")
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
 
-           
-            var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
-            string systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
-            int systemMessageTokenCount = 33;
+            string systemMessage = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(sendSystemMessage))
+            {
+                systemMessage = sendSystemMessage;
+            }
+            //var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
+            //systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
 
             var payload = new List<JObject>();
 
@@ -395,7 +406,8 @@ namespace ChatGPTSharp
                 currentTokenCount = newTokenCount;
             }
 
-            if (systemMessage != null)
+            //
+            if (!string.IsNullOrEmpty(systemMessage))
             {
                 payload.Insert(payload.Count - 1, new JObject()
                 {
@@ -413,8 +425,8 @@ namespace ChatGPTSharp
             text = Regex.Replace(text, "<|im_end|>", "");
             text = Regex.Replace(text, "<|im_sep|>", "");
             //TODO gptEncode(text).length;
-            //中文的话词等于字？
-            return text.Length;
+ 
+            return GPT3Token.Encode(text).Count;
         }
 
         private static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)
