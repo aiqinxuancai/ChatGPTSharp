@@ -9,7 +9,7 @@
     <RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
     <PackageTags>chatgpt;openai</PackageTags>
     <Title>ChatGPTSharp</Title>
-	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.6</VersionPrefix>
+	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.7</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +18,12 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-
+	<ItemGroup>
+		<None Include="..\README_CN.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
   </ItemGroup>
