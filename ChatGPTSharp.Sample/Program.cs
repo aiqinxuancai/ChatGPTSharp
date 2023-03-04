@@ -4,12 +4,19 @@ using ChatGPTSharp.Utils;
 
 Console.WriteLine("Hello, World!");
 
+var t1 = GPT3Token.Encode("111");
+var t2 = GPT3Token.Encode("hello");
+var t3 = GPT3Token.Encode("你好");
+var t4 = GPT3Token.Encode("hello world");
+var t5 = GPT3Token.Encode("1");
+var t6 = GPT3Token.Encode("hello, who are you?");
+
 //Test "gpt-3.5-turbo"
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
 client.IsDebug = true;
-var msg = await client.SendMessage("Hello");
+var msg = await client.SendMessage("你好！");
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("Who are you", msg.ConversationId, msg.MessageId);
+var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
 Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 
