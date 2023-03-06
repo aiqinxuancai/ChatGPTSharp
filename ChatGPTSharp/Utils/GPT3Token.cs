@@ -30,7 +30,9 @@ namespace ChatGPTSharp.Utils
             byte_encoder = BytesToUnicode();
             byte_decoder = byte_encoder.ToDictionary(x => x.Value, x => x.Key);
 
-            string bpe_file = GetTokenResString("vocab");
+            //string bpe_file = GetTokenResString("vocab");
+            string bpe_file = GetTokenResString("cl100k_base");
+            
 
             string[] lines = bpe_file.Split('\n');
 
@@ -41,11 +43,18 @@ namespace ChatGPTSharp.Utils
             Dictionary<string[], int>? bpeRanksCache = DictZip(bpeMerges, Enumerable.Range(0, bpeMerges.Count));
 
             Dictionary<Tuple<string, string>, int> bpe_ranks2 = bpeRanksCache.ToDictionary(
-                    kvp => Tuple.Create(kvp.Key[0], kvp.Key[1]),
+                    kvp => Tuple.Create(Base64ToString(kvp.Key[0]), kvp.Key[1]),
                     kvp => kvp.Value
                 );
 
             bpe_ranks = bpe_ranks2;
+        }
+
+        public static string Base64ToString(string base64)
+        {
+            byte[] decodedBytes = Convert.FromBase64String(base64);
+            string result = Encoding.UTF8.GetString(decodedBytes);
+            return result;
         }
 
         public static Dictionary<T1, T2> DictZip<T1, T2>(IEnumerable<T1> x, IEnumerable<T2> y)
