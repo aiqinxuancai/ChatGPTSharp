@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using ChatGPTSharp;
+using ChatGPTSharp.Sample;
 using ChatGPTSharp.Utils;
 
 Console.WriteLine("Hello, World!");
@@ -17,12 +18,12 @@ var t8 = GPT3Token.Encode("aiqinxuancai");
 var t9 = GPT3Token.Encode("“wrote jack a letter”");
 
 //Test "gpt-3.5-turbo"
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-client.IsDebug = true;
-var msg = await client.SendMessage("你好！");
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
+//var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+//client.IsDebug = true;
+//var msg = await client.SendMessage("你好！");
+//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+//var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
+//Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 
 
@@ -34,3 +35,6 @@ Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 
 //GPT3Token.getToken();
+
+
+await GroupAdminTest.Test();
