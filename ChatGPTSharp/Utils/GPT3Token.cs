@@ -161,8 +161,8 @@ namespace ChatGPTSharp.Utils
         public static List<int> Encode(string text)
         {
             var bpe_tokens = new List<int>();
-            string pattern = @"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+";
-
+            //string pattern = @"'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+";
+            string pattern = @"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+";
             var matches = Regex.Matches(text, pattern, RegexOptions.Compiled | RegexOptions.Multiline).Select(x => x.Value).ToArray();
             foreach (var token in matches)
             {
