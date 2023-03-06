@@ -7,11 +7,11 @@ This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous g
 
 ## Update
 
-### 1.0.7 20230304
-token algorithm after testing does not seem to find any problems, the code recovery
+### 1.0.8 20230304
+* token algorithm fix
 
 ### 1.0.6 20230303
-* The token calculation has been temporarily removed, which may cause exceptions when certain strings are combined. It will be restored after subsequent testing is completed.
+* The token algorithm has been temporarily removed, which may cause exceptions when certain strings are combined. It will be restored after subsequent testing is completed.
 
 ### 1.0.5 20230303
 * Add SendMessage parameters sendSystemType and sendSystemMessage to specify the insertion of system messages into the conversation.

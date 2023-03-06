@@ -14,7 +14,7 @@ var t7 = GPT3Token.Encode("hello, new bing!, my name is aiqinxuancai.");
 
 var t8 = GPT3Token.Encode("aiqinxuancai");
 
-var t9 = GPT3Token.Encode("aibic");
+var t9 = GPT3Token.Encode("“wrote jack a letter”");
 
 //Test "gpt-3.5-turbo"
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
