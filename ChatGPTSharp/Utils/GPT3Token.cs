@@ -107,6 +107,19 @@ namespace ChatGPTSharp.Utils
             return textDecoder.GetString(arr.Select(x => Convert.ToByte(x)).ToArray());
         }
 
+
+        //public static string EncodeStr(string str)
+        //{
+        //    byte[] buffer = Encoding.UTF8.GetBytes(str);
+        //    return string.Join("", Array.ConvertAll(buffer, x => x.ToString()));
+        //}
+
+        //public static string DecodeStr(string[] arr)
+        //{
+        //    byte[] buffer = Array.ConvertAll(arr, x => byte.Parse(x));
+        //    return Encoding.UTF8.GetString(buffer);
+        //}
+
         private static Dictionary<int, char> BytesToUnicode()
         {
             List<int> bs = Enumerable.Range((int)'!', (int)'~' - (int)'!' + 1)
@@ -210,27 +223,27 @@ namespace ChatGPTSharp.Utils
 
                 while (i < word.Count)
                 {
-
-                    var j = word.IndexOf(first, i);
+                    int j = Array.IndexOf(word.ToArray(), first, i);
                     if (j == -1)
                     {
-                        new_word.AddRange(word.GetRange(i, word.Count - i));
+                        new_word.AddRange(word.Skip(i));
                         break;
                     }
-                    new_word.AddRange(word.GetRange(i, j));
+                    new_word.AddRange(word.Skip(i).Take(j - i));
                     i = j;
 
                     if (word[i] == first && i < word.Count - 1 && word[i + 1] == second)
                     {
-                        new_word.Add(first.ToString() + second.ToString());
-                        i = i + 2;
+                        new_word.Add(first + second);
+                        i += 2;
                     }
                     else
                     {
-                        new_word.Add(word[i].ToString());
-                        i = i + 1;
+                        new_word.Add(word[i]);
+                        i += 1;
                     }
                 }
+                
 
                 word = new_word;
                 if (word.Count == 1)

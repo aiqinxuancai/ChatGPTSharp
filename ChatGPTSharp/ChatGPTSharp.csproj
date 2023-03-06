@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -10,6 +10,7 @@
     <PackageTags>chatgpt;openai</PackageTags>
     <Title>ChatGPTSharp</Title>
 	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.7</VersionPrefix>
+	 <UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

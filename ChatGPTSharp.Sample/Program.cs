@@ -10,6 +10,11 @@ var t3 = GPT3Token.Encode("你好");
 var t4 = GPT3Token.Encode("hello world");
 var t5 = GPT3Token.Encode("1");
 var t6 = GPT3Token.Encode("hello, who are you?");
+var t7 = GPT3Token.Encode("hello, new bing!, my name is aiqinxuancai.");
+
+var t8 = GPT3Token.Encode("aiqinxuancai");
+
+var t9 = GPT3Token.Encode("aibic");
 
 //Test "gpt-3.5-turbo"
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
