@@ -9,7 +9,7 @@
     <RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
     <PackageTags>chatgpt;openai</PackageTags>
     <Title>ChatGPTSharp</Title>
-	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.8</VersionPrefix>
+	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.0.9</VersionPrefix>
 	 <UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
   </PropertyGroup>
 
@@ -27,6 +27,9 @@
 	</ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TiktokenSharp\TiktokenSharp\TiktokenSharp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

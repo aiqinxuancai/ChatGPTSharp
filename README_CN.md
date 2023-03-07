@@ -6,6 +6,9 @@
 
 ## Update
 
+### 1.0.9 20230307
+* 使用 tiktokensharp 来计算token数量，修正token计算不准确的问题
+
 ### 1.0.8 20230306
 * token算法修复
 

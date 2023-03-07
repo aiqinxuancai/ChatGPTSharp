@@ -2,6 +2,7 @@
 using ChatGPTSharp;
 using ChatGPTSharp.Sample;
 using ChatGPTSharp.Utils;
+using TiktokenSharp;
 
 Console.WriteLine("Hello, World!");
 
@@ -16,6 +17,10 @@ var t7 = GPT3Token.Encode("hello, new bing!, my name is aiqinxuancai.");
 var t8 = GPT3Token.Encode("aiqinxuancai");
 
 var t9 = GPT3Token.Encode("“wrote jack a letter”");
+
+var tiktoken = TikToken.EncodingForModel("gpt-3.5-turbo");
+
+var t10 = tiktoken.Encode("hello world").Count;
 
 //Test "gpt-3.5-turbo"
 //var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");

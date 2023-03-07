@@ -7,6 +7,9 @@ This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous g
 
 ## Update
 
+### 1.0.9 20230307
+* Using TikTokSharp to calculate token count, fixing the issue of inaccurate token calculation.
+
 ### 1.0.8 20230304
 * token algorithm fix
 

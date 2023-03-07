@@ -14,6 +14,7 @@ using System.Globalization;
 using System.Data;
 using System.Net;
 using ChatGPTSharp.Utils;
+using TiktokenSharp;
 
 namespace ChatGPTSharp
 {
@@ -43,6 +44,8 @@ namespace ChatGPTSharp
         private int _messageTokenOffset  = 7;
         private string _proxyUri = string.Empty;
 
+        private TikToken _tiktoken;
+
         /// <summary>
         /// 
         /// </summary>
@@ -55,7 +58,7 @@ namespace ChatGPTSharp
             _isChatGptModel = _model.StartsWith("gpt-3.5-turbo");
             _openAIToken = openaiToken;
             _proxyUri = proxyUri;
-            
+            _tiktoken = TikToken.EncodingForModel(modelName);
 
             if (_isChatGptModel)
             {
@@ -428,6 +431,8 @@ namespace ChatGPTSharp
             text = Regex.Replace(text, "<|im_sep|>", "");
             //TODO gptEncode(text).length;
             //
+
+            return _tiktoken.Encode(text).Count;
 
 //#if DEBUG
             return GPT3Token.Encode(text).Count;
