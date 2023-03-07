@@ -45,7 +45,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Utils\tiktoken\" />
+    <None Update="Resources\cl100k_base.tiktoken">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
