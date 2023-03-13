@@ -13,22 +13,19 @@ var t4 = GPT3Token.Encode("hello world");
 var t5 = GPT3Token.Encode("1");
 var t6 = GPT3Token.Encode("hello, who are you?");
 var t7 = GPT3Token.Encode("hello, new bing!, my name is aiqinxuancai.");
-
 var t8 = GPT3Token.Encode("aiqinxuancai");
-
 var t9 = GPT3Token.Encode("“wrote jack a letter”");
 
 var tiktoken = TikToken.EncodingForModel("gpt-3.5-turbo");
-
 var t10 = tiktoken.Encode("hello world").Count;
 
 //Test "gpt-3.5-turbo"
-//var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-//client.IsDebug = true;
-//var msg = await client.SendMessage("你好！");
-//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-//var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
-//Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+client.IsDebug = true;
+var msg = await client.SendMessage("你好！");
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 
 

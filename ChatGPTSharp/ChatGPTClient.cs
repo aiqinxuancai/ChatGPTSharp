@@ -160,6 +160,7 @@ namespace ChatGPTSharp
                     };
                 }
 
+                //把当前消息加入会话
                 var userMessage = new Message
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -374,7 +375,9 @@ namespace ChatGPTSharp
             bool isFirstMessage = true;
             int currentTokenCount = systemMessage != null ? (GetTokenCount(systemMessage) + _messageTokenOffset) : 0;
             int maxTokenCount = MaxPromptTokens;
- 
+
+            //If the current token count has not exceeded and there are still messages in orderedMessages, continue. 
+            //TODO: Prepare to add restrictions to support setting only the last * messages.
             while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
             {
                 var message = orderedMessages.Last();
@@ -414,6 +417,7 @@ namespace ChatGPTSharp
 
             if (!string.IsNullOrEmpty(systemMessage))
             {
+                //Insert a system message before the last message.
                 payload.Insert(payload.Count - 1, new JObject()
                 {
                     {"role", "system"},
