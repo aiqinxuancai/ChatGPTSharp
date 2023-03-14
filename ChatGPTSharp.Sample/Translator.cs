@@ -19,7 +19,7 @@ namespace ChatGPTSharp.Sample
                 "メンテナンス中はゲームをプレイすることができません。" +
                 "ご迷惑をおかけいたしますが、ご理解ご了承の程よろしくお願いいたします。#刀剣乱舞 #とうらぶ";
 
-            var msg6 = await client.SendMessage($"[{jp}]", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
+            var msg = await client.SendMessage($"[{jp}]", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
         }
     }
 }
