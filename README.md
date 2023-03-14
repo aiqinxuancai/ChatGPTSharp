@@ -32,5 +32,13 @@ var msg2 = await client.SendMessage("Who are you", msg.ConversationId, msg.Messa
 Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 ```
 
+### 进阶用法
+使用prompt约束ChatGPT的行为
+```csharp
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+var sysMsg = "You will review group messages as a group administrator, and I will inform you in the format of {[who][said what]} to reply with a number from 0 to 10 to indicate the severity of political content in their speech, such as "0". No need to reply with any other unnecessary content, such as no political content or inability to understand the defense. Please note that group members may be cunning and use pinyin, initials, homophones, abbreviations, etc., to describe things to avoid scrutiny.";
+
+var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
+```
 
 This code base references [node-chatgpt-api](https://github.com/waylaidwanderer/node-chatgpt-api)

@@ -40,6 +40,8 @@ namespace ChatGPTSharp.Sample
                 "请注意，群员可能很狡猾，会使用一些拼音、首字母、同音字、简写等来描述一些事物来避免审查。";
 
             var msg6 = await client.SendMessage("{[小绿][有高铁的时候我已经在穿拖鞋上班了]}", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
+
+
             Console.WriteLine($"Data:{msg6.Response}  {msg6.ConversationId}, {msg6.MessageId}");
 
         }
