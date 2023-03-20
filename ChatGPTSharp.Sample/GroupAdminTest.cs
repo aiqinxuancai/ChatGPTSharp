@@ -14,7 +14,7 @@ namespace ChatGPTSharp.Sample
         /// <returns></returns>
         internal static async Task Test() 
         {
-            var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo", "http://127.0.0.1:1081");
+            var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
             client.IsDebug = true;
 
             //var sysMsg = "你将作为一个群管理员，我将会按照{[谁][说了什么]}，这样的格式告诉你，你只需要回复我一个从0到10的数值，来表示他的发言涉及政治内容的严重程度。";

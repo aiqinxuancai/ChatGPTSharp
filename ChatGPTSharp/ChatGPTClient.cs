@@ -34,7 +34,18 @@ namespace ChatGPTSharp
         public string EndToken { set; get; } = "<|endoftext|>";
         public string StartToken { set; get; } = "";
 
-       
+
+        public string OpenAIAPIBaseUri { 
+            set 
+            { 
+                _openAIAPIBaseUri = value;
+                UpdateUri();
+            } 
+            get 
+            { 
+                return _openAIAPIBaseUri; 
+            } 
+        }
 
 
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
@@ -46,7 +57,7 @@ namespace ChatGPTSharp
         private int _messageTokenOffset  = 7;
         private string _proxyUri = string.Empty;
         private int _timeoutSeconds = 60;
-
+        private string _openAIAPIBaseUri { set; get; } = "https://api.openai.com/";
 
 
         private TikToken _tiktoken;
@@ -110,25 +121,7 @@ namespace ChatGPTSharp
                 }
             }
 
-            //You can set up custom URLs and use your own reverse proxy address for support.
-            string apiBaseUri = Environment.GetEnvironmentVariable("OPENAI_API_BASE_URI_CUSTOM");
-
-            if (string.IsNullOrWhiteSpace(apiBaseUri))
-            {
-                apiBaseUri = "https://api.openai.com/";
-            }
-
-            UriBuilder uriBuilder = new UriBuilder(apiBaseUri);
-            if (_isChatGptModel)
-            {
-                uriBuilder.Path = "/v1/chat/completions";
-            }
-            else
-            {
-                uriBuilder.Path = $"/v1/completions";
-            }
-
-            CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
+            UpdateUri();
 
         }
 
@@ -269,7 +262,10 @@ namespace ChatGPTSharp
             client.Timeout = TimeSpan.FromSeconds(_timeoutSeconds);
 
             string uri = CompletionsUrl;
-
+            if (IsDebug)
+            {
+                Console.WriteLine(uri);
+            }
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_openAIToken}");
 
             JObject req = new JObject();
@@ -477,6 +473,29 @@ namespace ChatGPTSharp
             return orderedMessages;
         }
 
+
+        private void UpdateUri()
+        {
+            //You can set up custom URLs and use your own reverse proxy address for support.
+            string apiBaseUri = _openAIAPIBaseUri;
+
+            if (string.IsNullOrWhiteSpace(apiBaseUri))
+            {
+                apiBaseUri = "https://api.openai.com/";
+            }
+
+            UriBuilder uriBuilder = new UriBuilder(apiBaseUri);
+            if (_isChatGptModel)
+            {
+                uriBuilder.Path = "/v1/chat/completions";
+            }
+            else
+            {
+                uriBuilder.Path = $"/v1/completions";
+            }
+
+            CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
+        }
 
     }
 
