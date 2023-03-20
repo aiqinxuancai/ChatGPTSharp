@@ -110,15 +110,25 @@ namespace ChatGPTSharp
                 }
             }
 
+            //You can set up custom URLs and use your own reverse proxy address for support.
+            string apiBaseUri = Environment.GetEnvironmentVariable("OPENAI_API_BASE_URI_CUSTOM");
 
+            if (string.IsNullOrWhiteSpace(apiBaseUri))
+            {
+                apiBaseUri = "https://api.openai.com/";
+            }
+
+            UriBuilder uriBuilder = new UriBuilder(apiBaseUri);
             if (_isChatGptModel)
             {
-                CompletionsUrl = "https://api.openai.com/v1/chat/completions";
+                uriBuilder.Path = "/v1/chat/completions";
             }
             else
             {
-                CompletionsUrl = "https://api.openai.com/v1/completions";
+                uriBuilder.Path = $"/v1/completions";
             }
+
+            CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
 
         }
 
@@ -258,11 +268,7 @@ namespace ChatGPTSharp
             HttpClient client = new HttpClient(httpClientHandler);
             client.Timeout = TimeSpan.FromSeconds(_timeoutSeconds);
 
-            string uri = "https://api.openai.com/v1/completions";
-            if (_isChatGptModel)
-            {
-                uri = "https://api.openai.com/v1/chat/completions";
-            }
+            string uri = CompletionsUrl;
 
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_openAIToken}");
 
@@ -297,11 +303,12 @@ namespace ChatGPTSharp
 
 
             var resultJsonString = await response.Content.ReadAsStringAsync();
-            response.EnsureSuccessStatusCode();
             if (IsDebug)
             {
                 Console.WriteLine(resultJsonString);
             }
+            response.EnsureSuccessStatusCode();
+
 
             JObject result = JObject.Parse(resultJsonString);
             return (result, resultJsonString);
