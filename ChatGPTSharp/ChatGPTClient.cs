@@ -34,6 +34,8 @@ namespace ChatGPTSharp
         public string EndToken { set; get; } = "<|endoftext|>";
         public string StartToken { set; get; } = "";
 
+       
+
 
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
         private string _model = "text-davinci-003";
@@ -43,6 +45,9 @@ namespace ChatGPTSharp
         private bool _isUnofficialChatGptModel;
         private int _messageTokenOffset  = 7;
         private string _proxyUri = string.Empty;
+        private int _timeoutSeconds = 60;
+
+
 
         private TikToken _tiktoken;
 
@@ -51,7 +56,7 @@ namespace ChatGPTSharp
         /// </summary>
         /// <param name="openaiToken"></param>
         /// <param name="modelName">text-davinci-003、gpt-3.5-turbo</param>
-        public ChatGPTClient(string openaiToken, string modelName = "gpt-3.5-turbo", string proxyUri = "")
+        public ChatGPTClient(string openaiToken, string modelName = "gpt-3.5-turbo", string proxyUri = "", int timeoutSeconds = 60)
         {
             _isUnofficialChatGptModel = _model.StartsWith("text-chat") || _model.StartsWith("text-davinci-002-render");
             _model = modelName;
@@ -59,6 +64,7 @@ namespace ChatGPTSharp
             _openAIToken = openaiToken;
             _proxyUri = proxyUri;
             _tiktoken = TikToken.EncodingForModel(modelName);
+            _timeoutSeconds = timeoutSeconds;
 
             if (_isChatGptModel)
             {
@@ -250,7 +256,7 @@ namespace ChatGPTSharp
             }
 
             HttpClient client = new HttpClient(httpClientHandler);
-            client.Timeout = TimeSpan.FromSeconds(20);
+            client.Timeout = TimeSpan.FromSeconds(_timeoutSeconds);
 
             string uri = "https://api.openai.com/v1/completions";
             if (_isChatGptModel)
