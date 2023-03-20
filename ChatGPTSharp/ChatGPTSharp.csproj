@@ -11,9 +11,14 @@
     <Title>ChatGPTSharp</Title>
 	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.0</VersionPrefix>
 	 <UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
+	 <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
 	
   <ItemGroup>
+    <None Include="..\LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
