@@ -433,7 +433,10 @@ namespace ChatGPTSharp
                     {"content", systemMessage}
                 });
             }
-
+            if (IsDebug)
+            {
+                Console.WriteLine($"This request is expected to consume {currentTokenCount} tokens.");
+            }
             return payload;
         }
 
