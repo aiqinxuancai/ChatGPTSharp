@@ -435,7 +435,7 @@ namespace ChatGPTSharp
             }
             if (IsDebug)
             {
-                Console.WriteLine($"This request is expected to consume {currentTokenCount} tokens.");
+                Console.WriteLine($"Request expected consume {currentTokenCount} tokens.");
             }
             return payload;
         }
