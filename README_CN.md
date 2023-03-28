@@ -32,10 +32,9 @@
 ### 基本用法
 ```csharp
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-var msg = await client.SendMessage("你好，你现在是我的好朋友麻花藤！");
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
+var msg = await client.SendMessage("Hello, My name is Sin");
+var msgLast = await client.SendMessage("My name is?", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msgLast.Response}");
 ```
 
 ### 进阶用法
