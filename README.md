@@ -13,6 +13,8 @@ This project implements ChatGPT continuous dialogue based on ConversationId, whi
 ### 1.0.9 20230307
 * Using TiktokenSharp to calculate token count, fixing the issue of inaccurate token calculation.
 
+<details> <summary>Changelog for earlier versions.</summary>
+    
 ### 1.0.8 20230304
 * token algorithm fix
 
@@ -24,6 +26,9 @@ This project implements ChatGPT continuous dialogue based on ConversationId, whi
 
 ### 1.0.3 20230302
 * Add local token algorithm of gpt3, the algorithm is from js library gpt-3-encoder
+
+</details>
+
 
 ## Start
 
