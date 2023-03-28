@@ -11,7 +11,7 @@ This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous g
 * The initialization method of ChatGPTClient adds a request timeout setting and changes the default timeout time from 20 seconds to 60 seconds.
 
 ### 1.0.9 20230307
-* Using TikTokSharp to calculate token count, fixing the issue of inaccurate token calculation.
+* Using TiktokenSharp to calculate token count, fixing the issue of inaccurate token calculation.
 
 ### 1.0.8 20230304
 * token algorithm fix
