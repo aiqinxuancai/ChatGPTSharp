@@ -1,6 +1,6 @@
 # ChatGPTSharp
 
-This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. It supports models such as gpt-4, gpt-3.5-turbo, and text-davinci-003.
+This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. It supports models such as **gpt-4**, **gpt-3.5-turbo**, and **text-davinci-003**.
 
 
 [中文](README_CN.md)
