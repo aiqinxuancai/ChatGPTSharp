@@ -71,7 +71,7 @@ namespace ChatGPTSharp
         {
             _isUnofficialChatGptModel = _model.StartsWith("text-chat") || _model.StartsWith("text-davinci-002-render");
             _model = modelName;
-            _isChatGptModel = _model.StartsWith("gpt-3.5-turbo");
+            _isChatGptModel = _model.StartsWith("gpt-3.5-turbo") || _model.StartsWith("gpt-4");
             _openAIToken = openaiToken;
             _proxyUri = proxyUri;
             _tiktoken = TikToken.EncodingForModel(modelName);
