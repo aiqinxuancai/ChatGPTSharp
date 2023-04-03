@@ -1,6 +1,6 @@
 # ChatGPTSharp
 
-This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.
+This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. It supports models such as **gpt-4**, **gpt-3.5-turbo**, and **text-davinci-003**.
 
 
 [中文](README_CN.md)
@@ -11,8 +11,10 @@ This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous g
 * The initialization method of ChatGPTClient adds a request timeout setting and changes the default timeout time from 20 seconds to 60 seconds.
 
 ### 1.0.9 20230307
-* Using TikTokSharp to calculate token count, fixing the issue of inaccurate token calculation.
+* Using TiktokenSharp to calculate token count, fixing the issue of inaccurate token calculation.
 
+<details> <summary>Changelog for earlier versions.</summary>
+    
 ### 1.0.8 20230304
 * token algorithm fix
 
@@ -25,14 +27,16 @@ This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous g
 ### 1.0.3 20230302
 * Add local token algorithm of gpt3, the algorithm is from js library gpt-3-encoder
 
-## Start
+</details>
+
+
+## Usage
 
 ```csharp
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-var msg = await client.SendMessage("Hello");
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("Who are you", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
+var msg = await client.SendMessage("Hello, My name is Sin");
+var msgLast = await client.SendMessage("My name is?", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msgLast.Response}");
 ```
 
 ### Advanced usage

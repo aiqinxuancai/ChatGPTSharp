@@ -1,8 +1,6 @@
 # ChatGPTSharp
 
-这个项目支持真正的ChatGPT模型 "gpt-3.5-turbo"，以及上一代模型 "text-davinci-003"，两者都具有连续对话能力。
-
-后续可能会移除旧model的支持
+本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持模型gpt-4、gpt-3.5-turbo、text-davinci-003。
 
 ## Update
 
@@ -12,6 +10,8 @@
 ### 1.0.9 20230307
 * 使用 tiktokensharp 来计算token数量，修正token计算不准确的问题
 
+<details> <summary>更久的版本更新</summary>
+    
 ### 1.0.8 20230306
 * token算法修复
 
@@ -23,16 +23,18 @@
 
 ### 1.0.4 20230302
 * 增加gpt3的本地token算法，算法来自js库gpt-3-encoder
+    
+</details>
+
 
 ## 开始使用
 
 ### 基本用法
 ```csharp
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-var msg = await client.SendMessage("你好，你现在是我的好朋友麻花藤！");
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
+var msg = await client.SendMessage("Hello, My name is Sin");
+var msgLast = await client.SendMessage("My name is?", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msgLast.Response}");
 ```
 
 ### 进阶用法
