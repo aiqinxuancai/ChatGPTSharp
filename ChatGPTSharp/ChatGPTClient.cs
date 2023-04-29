@@ -18,14 +18,11 @@ using TiktokenSharp;
 
 namespace ChatGPTSharp
 {
-
-    
-
     public class ChatGPTClient
     {
-        public int MaxContextTokens { set; get; } = 4097;
+        public int MaxContextTokens { set; get; } = 4096;
         public int MaxResponseTokens { set; get; } = 1024;
-        public int MaxPromptTokens { set; get; } = 3073;
+        public int MaxPromptTokens { set; get; } = 3072;
         public string? UserLabel { set; get; } = "user";
         public string? ChatGptLabel { set; get; } = "assistant";
         
@@ -76,6 +73,20 @@ namespace ChatGPTSharp
             _proxyUri = proxyUri;
             _tiktoken = TikToken.EncodingForModel(modelName);
             _timeoutSeconds = timeoutSeconds;
+
+
+            if (_model.StartsWith("gpt-4-32k")) //32768
+            {
+                MaxContextTokens = 32768;
+                MaxResponseTokens = 1024;
+                MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+            }
+            else if (_model.StartsWith("gpt-4")) //8192
+            {
+                MaxContextTokens = 8192;
+                MaxResponseTokens = 1024;
+                MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+            }
 
             if (_isChatGptModel)
             {
