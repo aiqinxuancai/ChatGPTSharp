@@ -7,6 +7,9 @@ This project implements ChatGPT continuous dialogue based on ConversationId, whi
 
 ## Update
 
+### 1.1.2 20230429
+Support for the GPT-4 model and correction of the maximum token count for 8k and 32k.
+
 ### 1.1.0 20230320
 * The initialization method of ChatGPTClient adds a request timeout setting and changes the default timeout time from 20 seconds to 60 seconds.
 
