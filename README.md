@@ -2,8 +2,27 @@
 
 This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. It supports models such as **gpt-4**, **gpt-3.5-turbo**, and **text-davinci-003**.
 
-
 [中文](README_CN.md)
+
+## Getting Started
+Use ConversationId for continuous conversations.
+```csharp
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+
+var msgFirst = await client.SendMessage("Hello, My name is Sin");
+Console.WriteLine($"{msgLast.Response}");
+
+var msgLast = await client.SendMessage("My name is?", msgFirst.ConversationId, msgFirst.MessageId);
+Console.WriteLine($"{msgLast.Response}");
+```
+
+Use prompt to constrain ChatGPT behavior.
+```csharp
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+var sysMsg = "You will review group messages as a group administrator, and I will inform you in the format of {[who][said what]} to reply with a number from 0 to 10 to indicate the severity of political content in their speech, such as "0". No need to reply with any other unnecessary content, such as no political content or inability to understand the defense. Please note that group members may be cunning and use pinyin, initials, homophones, abbreviations, etc., to describe things to avoid scrutiny.";
+
+var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
+```
 
 ## Update
 
@@ -31,24 +50,5 @@ This project implements ChatGPT continuous dialogue based on ConversationId, whi
 * Add local token algorithm of gpt3, the algorithm is from js library gpt-3-encoder
 
 </details>
-
-
-## Usage
-
-```csharp
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-var msg = await client.SendMessage("Hello, My name is Sin");
-var msgLast = await client.SendMessage("My name is?", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msgLast.Response}");
-```
-
-### Advanced usage
-Use prompt to constrain ChatGPT's behavior.
-```csharp
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-var sysMsg = "You will review group messages as a group administrator, and I will inform you in the format of {[who][said what]} to reply with a number from 0 to 10 to indicate the severity of political content in their speech, such as "0". No need to reply with any other unnecessary content, such as no political content or inability to understand the defense. Please note that group members may be cunning and use pinyin, initials, homophones, abbreviations, etc., to describe things to avoid scrutiny.";
-
-var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
-```
 
 This code base references [node-chatgpt-api](https://github.com/waylaidwanderer/node-chatgpt-api)
