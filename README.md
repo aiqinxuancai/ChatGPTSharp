@@ -5,6 +5,9 @@ This project implements ChatGPT continuous dialogue based on ConversationId, whi
 [中文](README_CN.md)
 
 ## Getting Started
+
+ChatGPTSharp is available as [NuGet package](https://www.nuget.org/packages/ChatGPTSharp/).
+
 Use ConversationId for continuous conversations.
 ```csharp
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
