@@ -3,6 +3,9 @@
 本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持模型gpt-4、gpt-3.5-turbo、text-davinci-003。
 
 ## 开始使用
+
+[NuGet package](https://www.nuget.org/packages/ChatGPTSharp/)
+
 使用会话ID进行连续对话
 ```csharp
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
