@@ -14,106 +14,68 @@ using System.Globalization;
 using System.Data;
 using System.Net;
 using TiktokenSharp;
+using System.Runtime;
 
 namespace ChatGPTSharp
 {
     public class ChatGPTClient
     {
-        public int MaxContextTokens { set; get; } = 4096;
-        public int MaxResponseTokens { set; get; } = 1024;
-        public int MaxPromptTokens { set; get; } = 3072;
-        public string? UserLabel { set; get; } = "user";
-        public string? ChatGptLabel { set; get; } = "assistant";
-        
-        public string CompletionsUrl { set; get; } = "";
-        public bool IsDebug { set; get; }
-        public string EndToken { set; get; } = "<|endoftext|>";
-        public string StartToken { set; get; } = "";
-
-
-        public string OpenAIAPIBaseUri { 
-            set 
-            { 
-                _openAIAPIBaseUri = value;
-                UpdateUri();
-            } 
-            get 
-            { 
-                return _openAIAPIBaseUri; 
-            } 
-        }
-
-
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
-        private string _model = "text-davinci-003";
-        private string[] _stop = { };
-        private string _openAIToken = string.Empty;
-        private bool _isChatGptModel;
-        private bool _isUnofficialChatGptModel;
-        private int _messageTokenOffset  = 7;
-        private string _proxyUri = string.Empty;
-        private int _timeoutSeconds = 60;
-        private string _openAIAPIBaseUri { set; get; } = "https://api.openai.com/";
 
+        public ChatGPTClientSettings Settings { get; private set; }
 
         private TikToken _tiktoken;
+
+        public bool IsDebug {
+            get { return Settings.IsDebug; }
+            set { Settings.IsDebug = value; }
+        }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="openaiToken"></param>
         /// <param name="modelName">text-davinci-003、gpt-3.5-turbo</param>
-        public ChatGPTClient(string openaiToken, string modelName = "gpt-3.5-turbo", string proxyUri = "", int timeoutSeconds = 60)
+        public ChatGPTClient(string openaiToken, string modelName = "gpt-3.5-turbo", string proxyUri = "", uint timeoutSeconds = 60)
         {
-            _isUnofficialChatGptModel = _model.StartsWith("text-chat") || _model.StartsWith("text-davinci-002-render");
-            _model = modelName;
-            _isChatGptModel = _model.StartsWith("gpt-3.5-turbo") || _model.StartsWith("gpt-4");
-            _openAIToken = openaiToken;
-            _proxyUri = proxyUri;
-            _tiktoken = TikToken.EncodingForModel(modelName);
-            _timeoutSeconds = timeoutSeconds;
-
-            if (_model.StartsWith("gpt-4-32k")) //32768
+            if (string.IsNullOrEmpty(modelName))
             {
-                MaxContextTokens = 32768;
-                MaxResponseTokens = 1024;
-                MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                throw new ChatGPTException("modelName is null.");
             }
-            else if (_model.StartsWith("gpt-4")) //8192
+            if (string.IsNullOrEmpty(openaiToken))
             {
-                MaxContextTokens = 8192;
-                MaxResponseTokens = 1024;
-                MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                throw new ChatGPTException("openaiToken is null.");
             }
 
-            if (_isChatGptModel)
-            {
-                StartToken = "";
-                EndToken = "";
-                UserLabel = null;
-                ChatGptLabel = null;
-            }
-            else
-            {
-                if (_isUnofficialChatGptModel)
-                {
-                    StartToken = "<|im_start|>";
-                    EndToken = "<|im_end|>";
-                    _stop = new string[] { EndToken, StartToken, $"\n${UserLabel}:" };
-                }
-                else
-                {
-                    StartToken = "<|endoftext|>";
-                    EndToken = StartToken;
-                    _stop = new string[] { EndToken, $"\n{UserLabel}:" };
-                }
-            }
-            
-            UpdateUri();
-
+            ChatGPTClientSettings settings = new ChatGPTClientSettings()
+            { 
+                 ModelName = modelName,
+                 OpenAIToken = openaiToken,
+                 ProxyUri = proxyUri,
+                 TimeoutSeconds = timeoutSeconds
+            };
+            Settings = settings;
+            _tiktoken = TikToken.EncodingForModel(settings.ModelName);
         }
 
-        
+
+        public ChatGPTClient(ChatGPTClientSettings settings)
+        {
+            if (string.IsNullOrEmpty(settings.ModelName))
+            {
+                throw new ChatGPTException("ModelName is null.");
+            }
+            if (string.IsNullOrEmpty(settings.OpenAIToken))
+            {
+                throw new ChatGPTException("OpenAIToken is null.");
+            }
+
+
+            Settings = settings;
+            _tiktoken = TikToken.EncodingForModel(settings.ModelName);
+        }
+
+
 
         /// <summary>
         /// clear conversation
@@ -172,7 +134,7 @@ namespace ChatGPTSharp
                 string? reply = string.Empty;
                 var resultJsonString = string.Empty;
                 
-                if (_isChatGptModel)
+                if (Settings.IsChatGptModel)
                 {
                     List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id, sendSystemType, sendSystemMessage);
                     var data = await PostData(messages);
@@ -190,9 +152,9 @@ namespace ChatGPTSharp
                 }
 
                 //存储
-                if (!string.IsNullOrEmpty(EndToken))
+                if (!string.IsNullOrEmpty(Settings.EndToken))
                 {
-                    reply = reply?.Replace(EndToken, "");
+                    reply = reply?.Replace(Settings.EndToken, "");
                 }
 
                 reply = reply?.Trim();
@@ -224,7 +186,7 @@ namespace ChatGPTSharp
             }
             catch (Exception ex)
             {
-                if (IsDebug)
+                if (Settings.IsDebug)
                 {
                     Console.WriteLine(ex);
                     Debug.WriteLine(ex.ToString());
@@ -238,46 +200,46 @@ namespace ChatGPTSharp
         {
             var httpClientHandler = new HttpClientHandler();
 
-            if (!string.IsNullOrEmpty(_proxyUri))
+            if (!string.IsNullOrEmpty(Settings.ProxyUri))
             {
-                WebProxy proxy = new WebProxy(_proxyUri);
+                WebProxy proxy = new WebProxy(Settings.ProxyUri);
 
                 httpClientHandler.Proxy = proxy;
                 httpClientHandler.UseProxy = true;
             }
 
             HttpClient client = new HttpClient(httpClientHandler);
-            client.Timeout = TimeSpan.FromSeconds(_timeoutSeconds);
+            client.Timeout = TimeSpan.FromSeconds(Settings.TimeoutSeconds);
 
-            string uri = CompletionsUrl;
-            if (IsDebug)
+            string uri = Settings.CompletionsUrl;
+            if (Settings.IsDebug)
             {
                 Console.WriteLine(uri);
             }
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_openAIToken}");
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Settings.OpenAIToken}");
 
             JObject req = new JObject();
-            req["model"] = _model;
-            req["temperature"] = 0.8;
-            req["top_p"] = 1;
-            req["presence_penalty"] = 1;
+            req["model"] = Settings.ModelName;
+            req["temperature"] = Settings.Temperature;
+            req["top_p"] = Settings.TopP;
+            req["presence_penalty"] = Settings.PresencePenalty;
+            req["frequency_penalty"] = Settings.FrequencyPenalty;
 
             //req["max_tokens"] = 1024;
-            //req["frequency_penalty"] = 0;
 
-            if (_isChatGptModel)
+            if (Settings.IsChatGptModel)
             {
                 req["messages"] = new JArray(((List<JObject>)obj).ToArray());
             }
             else
             {
                 req["prompt"] = (string)obj;
-                req["stop"] = new JArray(_stop);
+                req["stop"] = new JArray(Settings.Stop);
             }
 
             var jsonString = req.ToString();
 
-            if (IsDebug)
+            if (Settings.IsDebug)
             {
                 Console.WriteLine(jsonString);
             }
@@ -287,7 +249,7 @@ namespace ChatGPTSharp
 
 
             var resultJsonString = await response.Content.ReadAsStringAsync();
-            if (IsDebug)
+            if (Settings.IsDebug)
             {
                 Console.WriteLine(resultJsonString);
             }
@@ -302,19 +264,19 @@ namespace ChatGPTSharp
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
             var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
-            string promptPrefix = $"\n{StartToken}Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}{StartToken}\n\n";
+            string promptPrefix = $"\n{Settings.StartToken}Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}{Settings.StartToken}\n\n";
 
-            var promptSuffix = $"{ChatGptLabel}:\n";
+            var promptSuffix = $"{Settings.ChatGptLabel}:\n";
             var currentTokenCount = GetTokenCount($"{promptPrefix}{promptSuffix}"); //TODO
             var promptBody = string.Empty;
-            var maxTokenCount = MaxPromptTokens;
+            var maxTokenCount = Settings.MaxPromptTokens;
 
             while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
             {
                 var message = orderedMessages.Last();
                 orderedMessages.Remove(message);
-                var roleLabel = message.Role == "User" ? UserLabel : ChatGptLabel;
-                var messageString = $"{roleLabel}:\n{message.Content}{EndToken}\n";
+                var roleLabel = message.Role == "User" ? Settings.UserLabel : Settings.ChatGptLabel;
+                var messageString = $"{roleLabel}:\n{message.Content}{Settings.EndToken}\n";
                 var newPromptBody = string.Empty;
 
                 if (!string.IsNullOrEmpty(promptBody))
@@ -370,8 +332,8 @@ namespace ChatGPTSharp
             var payload = new List<JObject>();
 
             bool isFirstMessage = true;
-            int currentTokenCount = systemMessage != null ? (GetTokenCount(systemMessage) + _messageTokenOffset) : 0;
-            int maxTokenCount = MaxPromptTokens;
+            int currentTokenCount = systemMessage != null ? (GetTokenCount(systemMessage) + Settings.MessageTokenOffset) : 0;
+            int maxTokenCount = Settings.MaxPromptTokens;
 
             //If the current token count has not exceeded and there are still messages in orderedMessages, continue. 
             //TODO: Prepare to add restrictions to support setting only the last * messages.
@@ -383,17 +345,17 @@ namespace ChatGPTSharp
                 string? messageString = message.Content;
                 if (message.Role == "User")
                 {
-                    if (UserLabel != null)
+                    if (Settings.UserLabel != null)
                     {
-                        messageString = $"{UserLabel}:\n{messageString}";
+                        messageString = $"{Settings.UserLabel}:\n{messageString}";
                     }
-                    if (ChatGptLabel != null)
+                    if (Settings.ChatGptLabel != null)
                     {
-                        messageString = $"{messageString}\n{ChatGptLabel}:\n";
+                        messageString = $"{messageString}\n{Settings.ChatGptLabel}:\n";
                     }
                 }
 
-                int newTokenCount = GetTokenCount(messageString!) + currentTokenCount + _messageTokenOffset;
+                int newTokenCount = GetTokenCount(messageString!) + currentTokenCount + Settings.MessageTokenOffset;
                 if (newTokenCount > maxTokenCount)
                 {
                     if (!isFirstMessage)
@@ -406,7 +368,7 @@ namespace ChatGPTSharp
                 payload.Insert(0, new JObject()
                 {
                     { "role" , message.Role == "User" ? "user" : "assistant" },
-                    {"content" , messageString }
+                    { "content" , messageString }
                 });
                 isFirstMessage = false;
                 currentTokenCount = newTokenCount;
@@ -417,11 +379,11 @@ namespace ChatGPTSharp
                 //Insert a system message before the last message.
                 payload.Insert(payload.Count - 1, new JObject()
                 {
-                    {"role", "system"},
-                    {"content", systemMessage}
+                    { "role", "system" },
+                    { "content", systemMessage }
                 });
             }
-            if (IsDebug)
+            if (Settings.IsDebug)
             {
                 Console.WriteLine($"Request expected consume {currentTokenCount} tokens.");
             }
@@ -453,29 +415,6 @@ namespace ChatGPTSharp
             return orderedMessages;
         }
 
-
-        private void UpdateUri()
-        {
-            //You can set up custom URLs and use your own reverse proxy address for support.
-            string apiBaseUri = _openAIAPIBaseUri;
-
-            if (string.IsNullOrWhiteSpace(apiBaseUri))
-            {
-                apiBaseUri = "https://api.openai.com/";
-            }
-
-            UriBuilder uriBuilder = new UriBuilder(apiBaseUri);
-            if (_isChatGptModel)
-            {
-                uriBuilder.Path = "/v1/chat/completions";
-            }
-            else
-            {
-                uriBuilder.Path = $"/v1/completions";
-            }
-
-            CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
-        }
 
     }
 

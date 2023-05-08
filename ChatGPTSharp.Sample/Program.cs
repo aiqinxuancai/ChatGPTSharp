@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using ChatGPTSharp;
 using ChatGPTSharp.Sample;
-using ChatGPTSharp.Utils;
 using TiktokenSharp;
 
 Console.WriteLine("Hello, World!");
