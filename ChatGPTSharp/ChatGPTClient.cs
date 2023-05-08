@@ -13,7 +13,6 @@ using ChatGPTSharp.Model;
 using System.Globalization;
 using System.Data;
 using System.Net;
-using ChatGPTSharp.Utils;
 using TiktokenSharp;
 
 namespace ChatGPTSharp
@@ -456,18 +455,7 @@ namespace ChatGPTSharp
         {
             text = Regex.Replace(text, "<|im_end|>", "");
             text = Regex.Replace(text, "<|im_sep|>", "");
-            //TODO gptEncode(text).length;
-            //
-
             return _tiktoken.Encode(text).Count;
-
-//#if DEBUG
-            return GPT3Token.Encode(text).Count;
-//#else
-//            return text.Length;
-//#endif
-
-
         }
 
         private static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)

@@ -1,55 +1,48 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>enable</Nullable>
-    <Description>This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.</Description>
-    <PackageProjectUrl>https://github.com/aiqinxuancai/ChatGPTSharp</PackageProjectUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
-    <PackageTags>chatgpt;openai</PackageTags>
-    <Title>ChatGPTSharp</Title>
-	 <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.2</VersionPrefix>
-	 <UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
-	 <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-  </PropertyGroup>
-	
-  <ItemGroup>
-    <None Include="..\LICENSE.txt">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Include="..\README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.1;netstandard2.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<Description>This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.</Description>
+		<PackageProjectUrl>https://github.com/aiqinxuancai/ChatGPTSharp</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
+		<PackageTags>chatgpt;openai</PackageTags>
+		<Title>ChatGPTSharp</Title>
+		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.2</VersionPrefix>
+		<UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\LICENSE.txt">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 	<ItemGroup>
 		<None Include="..\README_CN.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TiktokenSharp\TiktokenSharp\TiktokenSharp.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="TokenResource.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>TokenResource.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="TokenResource.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>TokenResource.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0'">
+		<PackageReference Include="IndexRange" Version="1.0.2" />
+		<PackageReference Include="TA.System.Runtime.CompilerServices.RuntimeHelpers.GetSubArray" Version="1.0.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\TiktokenSharp\TiktokenSharp\TiktokenSharp.csproj" />
+	</ItemGroup>
 
 </Project>
