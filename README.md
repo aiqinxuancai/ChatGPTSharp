@@ -35,14 +35,13 @@ var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", 
 ### 1.1.2 20230429
 * Support for the GPT-4 model and correction of the maximum token count for 8k and 32k.
 
+<details> <summary>Changelog for earlier versions.</summary>
 ### 1.1.0 20230320
 * The initialization method of ChatGPTClient adds a request timeout setting and changes the default timeout time from 20 seconds to 60 seconds.
 
 ### 1.0.9 20230307
 * Using TiktokenSharp to calculate token count, fixing the issue of inaccurate token calculation.
 
-<details> <summary>Changelog for earlier versions.</summary>
-    
 ### 1.0.8 20230304
 * token algorithm fix
 
