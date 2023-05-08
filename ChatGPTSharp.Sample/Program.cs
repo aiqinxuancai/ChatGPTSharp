@@ -6,11 +6,11 @@ using TiktokenSharp;
 Console.WriteLine("Hello, World!");
 
 
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4");
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4", timeoutSeconds: 1000);
 client.IsDebug = true;
-var msg = await client.SendMessage("你好！");
+var msg = await client.SendMessage("我接下来说一个数值，你把这个数值加上9527后再返回给我");
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("你是谁？", msg.ConversationId, msg.MessageId);
+var msg2 = await client.SendMessage("5", msg.ConversationId, msg.MessageId);
 Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 
