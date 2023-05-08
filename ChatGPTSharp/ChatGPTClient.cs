@@ -73,7 +73,6 @@ namespace ChatGPTSharp
             _tiktoken = TikToken.EncodingForModel(modelName);
             _timeoutSeconds = timeoutSeconds;
 
-
             if (_model.StartsWith("gpt-4-32k")) //32768
             {
                 MaxContextTokens = 32768;
@@ -89,48 +88,27 @@ namespace ChatGPTSharp
 
             if (_isChatGptModel)
             {
-                //if (UserLabel.ToLower() == "user")
-                //{
-                //    UserLabel = null;
-                //}
-                //if (ChatGptLabel.ToLower() == "assistant")
-                //{
-                //    ChatGptLabel = null;
-                //}
-
-                //gpt-3.5-turbo 
+                StartToken = "";
+                EndToken = "";
                 UserLabel = null;
                 ChatGptLabel = null;
             }
-
-            if (_isChatGptModel)
-            {
-                StartToken = "";
-                EndToken = "";
-            }
-            else if (_isUnofficialChatGptModel)
-            {
-                StartToken = "<|im_start|>";
-                EndToken = "<|im_end|>";
-            }
             else
-            {
-                StartToken = "<|endoftext|>";
-                EndToken = StartToken;
-            }
-
-            if (!_isChatGptModel)
             {
                 if (_isUnofficialChatGptModel)
                 {
+                    StartToken = "<|im_start|>";
+                    EndToken = "<|im_end|>";
                     _stop = new string[] { EndToken, StartToken, $"\n${UserLabel}:" };
                 }
                 else
                 {
+                    StartToken = "<|endoftext|>";
+                    EndToken = StartToken;
                     _stop = new string[] { EndToken, $"\n{UserLabel}:" };
                 }
             }
-
+            
             UpdateUri();
 
         }
