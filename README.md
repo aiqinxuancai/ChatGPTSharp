@@ -36,6 +36,7 @@ var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", 
 * Support for the GPT-4 model and correction of the maximum token count for 8k and 32k.
 
 <details> <summary>Changelog for earlier versions.</summary>
+
 ### 1.1.0 20230320
 * The initialization method of ChatGPTClient adds a request timeout setting and changes the default timeout time from 20 seconds to 60 seconds.
 
