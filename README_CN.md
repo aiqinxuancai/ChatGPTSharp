@@ -29,6 +29,9 @@ var msg = await client.SendMessage("{[小王][特朗普还能再当总统吗？]
 
 ## Update
 
+### 1.1.3 20230508
+* 移除旧的token算法代码，支持netstandard2.0，现在.NET Framework也可以使用此库
+
 ### 1.1.2 20230429
 * 支持gpt-4模型，修正8k及32k的最大token数量
 

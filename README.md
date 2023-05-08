@@ -29,6 +29,9 @@ var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", 
 
 ## Update
 
+### 1.1.3 20230508
+* Removed the old token algorithm code and now supports netstandard2.0, now, the library can also be used with .NET Framework.
+
 ### 1.1.2 20230429
 * Support for the GPT-4 model and correction of the maximum token count for 8k and 32k.
 
