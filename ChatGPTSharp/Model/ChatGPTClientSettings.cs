@@ -32,7 +32,13 @@ namespace ChatGPTSharp.Model
                     MaxContextTokens = 8192;
                     MaxResponseTokens = 1024;
                     MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                } 
+                }
+                else if (_modelName.StartsWith("gpt-3.5-turbo-16k")) //8192
+                {
+                    MaxContextTokens = 16384;
+                    MaxResponseTokens = 1024;
+                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                }
                 else
                 {
                     MaxContextTokens = 4096;
