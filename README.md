@@ -29,6 +29,9 @@ var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", 
 
 ## Update
 
+### 1.1.4 20230711
+* Add support gpt-3.5-turbo-16k
+ 
 ### 1.1.3 20230508
 * Removed the old token algorithm code and now supports netstandard2.0, now, the library can also be used with .NET Framework.
 
