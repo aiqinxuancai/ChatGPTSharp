@@ -24,25 +24,19 @@ Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 //GPT3Token.getToken();
 
-
 //int tokenCount = 0;
-
-
 //double usdor = 1 / 0.0018 * 1000;
-
-//int count = (int)usdor / 242;
-
-
+//int count = (int)usdor / 12873;
 //while (true)
 //{
 //    await Translator.Test();
-//    tokenCount += 242;
+//    tokenCount += 12873;
 
 //    if (tokenCount > usdor)
 //    {
 //        break;
 //    }
-//    Console.WriteLine($"使用token：{tokenCount} 次数：{tokenCount / 242}");
+//    Console.WriteLine($"使用token：{tokenCount} 次数：{tokenCount / 12873}");
 //}
 
 
