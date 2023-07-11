@@ -6,12 +6,12 @@ using TiktokenSharp;
 Console.WriteLine("Hello, World!");
 
 
-//var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4", timeoutSeconds: 1000);
-//client.IsDebug = true;
-//var msg = await client.SendMessage("我接下来说一个数值，你把这个数值加上9527后再返回给我");
-//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-//var msg2 = await client.SendMessage("5", msg.ConversationId, msg.MessageId);
-//Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
+var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4", timeoutSeconds: 1000);
+client.IsDebug = true;
+var msg = await client.SendMessage("我接下来说一个数值，你把这个数值加上9527后再返回给我");
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+var msg2 = await client.SendMessage("5", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
 
 
 
@@ -25,24 +25,24 @@ Console.WriteLine("Hello, World!");
 //GPT3Token.getToken();
 
 
-int tokenCount = 0;
+//int tokenCount = 0;
 
 
-double usdor = 1 / 0.0018 * 1000;
+//double usdor = 1 / 0.0018 * 1000;
 
-int count = (int)usdor / 242;
+//int count = (int)usdor / 242;
 
 
-while (true)
-{
-    await Translator.Test();
-    tokenCount += 242;
+//while (true)
+//{
+//    await Translator.Test();
+//    tokenCount += 242;
 
-    if (tokenCount > usdor)
-    {
-        break;
-    }
-    Console.WriteLine($"使用token：{tokenCount}");
-}
+//    if (tokenCount > usdor)
+//    {
+//        break;
+//    }
+//    Console.WriteLine($"使用token：{tokenCount}");
+//}
 
 
