@@ -6,6 +6,9 @@ using TiktokenSharp;
 Console.WriteLine("Hello, World!");
 
 
+
+//await GetMovieTitle.Test();
+
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4", timeoutSeconds: 1000);
 client.IsDebug = true;
 var msg = await client.SendMessage("我接下来说一个数值，你把这个数值加上9527后再返回给我");
