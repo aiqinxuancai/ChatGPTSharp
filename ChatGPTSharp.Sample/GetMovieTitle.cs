@@ -22,6 +22,20 @@ namespace ChatGPTSharp.Sample
 
             """;
 
+        //const string kSystemMessage = """
+        //    Please tell me the title of the work from the content I provided, and return it in the following JSON format:
+        //    { "title": <string> }
+        //    Please note:
+
+        //    Do not add explanations.
+        //    The content may contain the names of the work in multiple languages, typically separated by the symbol "/", please return the name in the first language.
+        //    Avoid identifying subtitle group names and subtitle names as titles.
+        //    Do not truncate or translate the work's name or change characters.
+        //    The work's name will not contain symbols such as []​1​.
+        //    Below is the content:
+
+        //    """;
+
         internal static async Task Test()
         {
 
