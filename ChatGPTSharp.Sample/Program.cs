@@ -11,7 +11,10 @@ Console.WriteLine("Hello, World!");
 
 var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4", timeoutSeconds: 1000);
 client.IsDebug = true;
-var msg = await client.SendMessage("我接下来说一个数值，你把这个数值加上9527后再返回给我");
+
+var msgString = "我接下来说一个数值，你把这个数值加上9527后再返回给我";
+//var msgString = "I will now say a number, and you should add 9527 to this number and then return it to me";
+var msg = await client.SendMessage(msgString);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 var msg2 = await client.SendMessage("5", msg.ConversationId, msg.MessageId);
 Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");

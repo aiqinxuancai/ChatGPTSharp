@@ -120,6 +120,8 @@ namespace ChatGPTSharp
                 }
 
                 //把当前消息加入会话
+                //Add current message to conversation
+                
                 var userMessage = new Message
                 {
                     Id = Guid.NewGuid().ToString(),
