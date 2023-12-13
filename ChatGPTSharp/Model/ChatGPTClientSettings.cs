@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ChatGPTSharp.Model
 {
@@ -21,57 +22,50 @@ namespace ChatGPTSharp.Model
             {
                 _modelName = value;
 
-                if (_modelName.StartsWith("gpt-4-32k")) //32768
+                //TODO auto tokens number, use regex "-(\d+)k\W" * 1024
+
+                Regex regex = new Regex("-(\\d+)k\\W");
+                var match = regex.Match(_modelName);
+                bool findTokenNumber = false;
+
+                if (match.Success)
                 {
-                    MaxContextTokens = 32768;
-                    MaxResponseTokens = 1024;
-                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                }
-                else if (_modelName.StartsWith("gpt-4")) //8192
-                {
-                    MaxContextTokens = 8192;
-                    MaxResponseTokens = 1024;
-                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                }
-                else if (_modelName.StartsWith("gpt-3.5-turbo-16k")) //8192
-                {
-                    MaxContextTokens = 16384;
-                    MaxResponseTokens = 1024;
-                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                }
-                else
-                {
-                    MaxContextTokens = 4096;
-                    MaxResponseTokens = 1024;
-                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                    var tokens = match.Groups[1].Value;
+                    if (int.TryParse(tokens, out int toukensNumber)) {
+                        MaxContextTokens = toukensNumber * 1024;
+                        MaxResponseTokens = 1024;
+                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                        findTokenNumber = true;
+                    }
                 }
 
-                _isChatGptModel = _modelName.StartsWith("gpt-3.5-turbo") || _modelName.StartsWith("gpt-4");
-                _isUnofficialChatGptModel = _modelName.StartsWith("text-chat") || _modelName.StartsWith("text-davinci-002-render");
-
-                if (IsChatGptModel)
+                if (!findTokenNumber)
                 {
-                    StartToken = "";
-                    EndToken = "";
-                    UserLabel = null;
-                    ChatGptLabel = null;
-                }
-                else
-                {
-                    if (IsUnofficialChatGptModel)
+                    if (_modelName.StartsWith("gpt-4-32k")) //32768
                     {
-                        StartToken = "<|im_start|>";
-                        EndToken = "<|im_end|>";
-                        Stop = new string[] { EndToken, StartToken, $"\n${UserLabel}:" };
+                        MaxContextTokens = 32768;
+                        MaxResponseTokens = 1024;
+                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                    }
+                    else if (_modelName.StartsWith("gpt-4")) //8192
+                    {
+                        MaxContextTokens = 8192;
+                        MaxResponseTokens = 1024;
+                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                    }
+                    else if (_modelName.StartsWith("gpt-3.5-turbo-16k")) //8192
+                    {
+                        MaxContextTokens = 16384;
+                        MaxResponseTokens = 1024;
+                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
                     }
                     else
                     {
-                        StartToken = "<|endoftext|>";
-                        EndToken = StartToken;
-                        Stop = new string[] { EndToken, $"\n{UserLabel}:" };
+                        MaxContextTokens = 4096;
+                        MaxResponseTokens = 1024;
+                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
                     }
                 }
-
 
                 UpdateCompletionsUrl();
 
@@ -81,38 +75,12 @@ namespace ChatGPTSharp.Model
             } 
         }
 
-        private bool _isChatGptModel;
-
-        public bool IsChatGptModel 
-        {
-            get 
-            {
-                return _isChatGptModel;
-            } 
-        }
-
-
-        private bool _isUnofficialChatGptModel;
-
-        public bool IsUnofficialChatGptModel
-        {
-            get
-            {
-                return _isUnofficialChatGptModel;
-            }
-        }
 
         private void UpdateCompletionsUrl()
         {
             UriBuilder uriBuilder = new UriBuilder(OpenAIAPIBaseUri);
-            if (IsChatGptModel)
-            {
-                uriBuilder.Path = "/v1/chat/completions";
-            }
-            else
-            {
-                uriBuilder.Path = $"/v1/completions";
-            }
+
+            uriBuilder.Path = "/v1/chat/completions";
 
             CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
         }
@@ -143,26 +111,6 @@ namespace ChatGPTSharp.Model
         /// </summary>
         public bool IsDebug { set; get; }
 
-        /// <summary>
-        /// User label, only used in non-GPT models, If you need to customize it, please modify it after setting ModelName.
-        /// </summary>
-        public string? UserLabel { set; get; } = "user";
-
-        /// <summary>
-        /// ChatGPT return content label, only used in non-GPT models, If you need to customize it, please modify it after setting ModelName.
-        /// </summary>
-        public string? ChatGptLabel { set; get; } = "assistant";
-
-        /// <summary>
-        /// The end of each conversation content, only used in non-GPT models, If you need to customize it, please modify it after setting ModelName.
-        /// </summary>
-        public string EndToken { set; get; } = string.Empty;
-
-        /// <summary>
-        /// The beginning of each conversation content, only used in non-GPT models, If you need to customize it, please modify it after setting ModelName.
-        /// </summary>
-        public string StartToken { set; get; } = string.Empty;
-
 
         private string _openAIAPIBaseUri = "https://api.openai.com/";
 
@@ -183,8 +131,6 @@ namespace ChatGPTSharp.Model
             } 
         }
 
-
-
         public string CompletionsUrl { get; private set; } = string.Empty;
 
 
@@ -202,12 +148,6 @@ namespace ChatGPTSharp.Model
         /// Timeout period. In GPT-4, it is recommended to set a higher value due to congestion.
         /// </summary>
         public uint TimeoutSeconds { set; get; } = 60;
-
-
-        /// <summary>
-        /// Up to 4 sequences where the API will stop generating further tokens. The returned text will not contain the stop sequence.
-        /// </summary>
-        public string[] Stop { private set; get; } = new string[0];
 
         /// <summary>
         /// Defaults to 1

@@ -26,6 +26,11 @@ namespace ChatGPTSharp
 
         private TikToken _tiktoken;
 
+        /// <summary>
+        /// gpt-4-vision-preview
+        /// </summary>
+        private bool _isVisionModel;
+
         public bool IsDebug {
             get { return Settings.IsDebug; }
             set { Settings.IsDebug = value; }
@@ -54,8 +59,11 @@ namespace ChatGPTSharp
                  ProxyUri = proxyUri,
                  TimeoutSeconds = timeoutSeconds
             };
-            Settings = settings;
+
+            _isVisionModel = modelName.Contains("-vision");
             _tiktoken = TikToken.EncodingForModel(settings.ModelName);
+
+            Settings = settings;
         }
 
 
@@ -93,16 +101,21 @@ namespace ChatGPTSharp
         }
 
 
+
         /// <summary>
         /// SendMessage
         /// </summary>
         /// <param name="message"></param>
         /// <param name="conversationId"></param>
         /// <param name="parentMessageId"></param>
-        /// <param name="sendSystemType">only gpt-3.5-turbo</param>
-        /// <param name="sendSystemMessage">only gpt-3.5-turbo, need SendSystemType.Custom, see https://platform.openai.com/docs/guides/chat </param>
+        /// <param name="systemPrompt">https://platform.openai.com/docs/guides/chat </param>
+        /// <param name="images">set a local image file or an image URL; if it is a local image, it will be converted to base64 for transmission.</param>
         /// <returns></returns>
-        public async Task<ConversationResult> SendMessage(string message, string conversationId = "", string parentMessageId = "", SendSystemType sendSystemType = SendSystemType.None, string sendSystemMessage = "")
+        public async Task<ConversationResult> SendMessage(string message, 
+            string conversationId = "", 
+            string parentMessageId = "", 
+            string systemPrompt = "", 
+            List<string>? images = null)
         {
             try
             {
@@ -114,18 +127,51 @@ namespace ChatGPTSharp
                 {
                     conversation = new Conversation
                     {
-                        Messages = new List<Message>(),
+                        Messages = new List<ChatMessage>(),
                         CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     };
                 }
 
+                JToken content;
+
+                if (_isVisionModel)
+                {
+                    //content.Type = JTokenType.String;
+                    var j = new JArray();
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        //{
+                        //    "type": "text",
+                        //    "text": "What are in these images? Is there any difference between them?",
+                        //},
+                        j.Add(new JObject { { "type", "text" }, { "text", message } });
+                    }
+                   
+                    //image token
+                    /*
+
+                            {
+                              "type": "image_url",
+                              "image_url": {
+                                "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg",
+                              },
+                            },
+ 
+                     */
+                }
+                else
+                {
+                    content = new JValue(message);
+                }
+                
+
                 //把当前消息加入会话
-                var userMessage = new Message
+                var userMessage = new ChatMessage
                 {
                     Id = Guid.NewGuid().ToString(),
                     ParentMessageId = parentMessageId,
                     Role = "User",
-                    Content = message,
+                    Content = content,
                 };
 
                 conversation.Messages.Add(userMessage);
@@ -133,35 +179,18 @@ namespace ChatGPTSharp
                 JObject result = new JObject();
                 string? reply = string.Empty;
                 var resultJsonString = string.Empty;
-                
-                if (Settings.IsChatGptModel)
-                {
-                    List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id, sendSystemType, sendSystemMessage);
-                    var data = await PostData(messages);
-                    result = data.result;
-                    reply = (string?)result.SelectToken("choices[0].message.content");
-                    resultJsonString = data.source;
-                }
-                else
-                {
-                    string prompt = BuildPrompt(conversation.Messages, userMessage.Id);
-                    var data = await PostData(prompt);
-                    result = data.result;
-                    reply = (string?)result.SelectToken("choices[0].text");
-                    resultJsonString = data.source;
-                }
 
-                //存储
-                if (!string.IsNullOrEmpty(Settings.EndToken))
-                {
-                    reply = reply?.Replace(Settings.EndToken, "");
-                }
+                List<JObject> messages = BuildChatPayload(conversation.Messages, userMessage.Id, systemPrompt);
+                var data = await PostData(messages);
+                result = data.result;
+                reply = (string?)result.SelectToken("choices[0].message.content");
+                resultJsonString = data.source;
 
                 reply = reply?.Trim();
 
                 //userMessage.UsageTokens = result.SelectToken("usage.prompt_tokens").ToObject<int>();
 
-                var replyMessage = new Message
+                var replyMessage = new ChatMessage
                 {
                     Id = Guid.NewGuid().ToString(),
                     ParentMessageId = userMessage.Id,
@@ -225,17 +254,9 @@ namespace ChatGPTSharp
             req["presence_penalty"] = Settings.PresencePenalty;
             req["frequency_penalty"] = Settings.FrequencyPenalty;
 
-            //req["max_tokens"] = 1024;
+            req["messages"] = new JArray(((List<JObject>)obj).ToArray());
 
-            if (Settings.IsChatGptModel)
-            {
-                req["messages"] = new JArray(((List<JObject>)obj).ToArray());
-            }
-            else
-            {
-                req["prompt"] = (string)obj;
-                req["stop"] = new JArray(Settings.Stop);
-            }
+
 
             var jsonString = req.ToString();
 
@@ -260,79 +281,14 @@ namespace ChatGPTSharp
             return (result, resultJsonString);
         }
 
-        private string BuildPrompt(List<Message> messages, string parentMessageId)
+        public List<JObject> BuildChatPayload(List<ChatMessage> messages, string parentMessageId, string systemPrompt = "")
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
-            var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
-            string promptPrefix = $"\n{Settings.StartToken}Instructions:\nYou are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}{Settings.StartToken}\n\n";
-
-            var promptSuffix = $"{Settings.ChatGptLabel}:\n";
-            var currentTokenCount = GetTokenCount($"{promptPrefix}{promptSuffix}"); //TODO
-            var promptBody = string.Empty;
-            var maxTokenCount = Settings.MaxPromptTokens;
-
-            while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
-            {
-                var message = orderedMessages.Last();
-                orderedMessages.Remove(message);
-                var roleLabel = message.Role == "User" ? Settings.UserLabel : Settings.ChatGptLabel;
-                var messageString = $"{roleLabel}:\n{message.Content}{Settings.EndToken}\n";
-                var newPromptBody = string.Empty;
-
-                if (!string.IsNullOrEmpty(promptBody))
-                {
-                    newPromptBody = $"{messageString}{promptBody}";
-                }
-                else
-                {
-                    newPromptBody = $"{promptPrefix}{messageString}{promptBody}";
-                }
-
-                var newTokenCount = GetTokenCount($"{promptPrefix}{newPromptBody}{promptSuffix}");
-
-                if (newTokenCount > maxTokenCount)
-                {
-                    if (!string.IsNullOrEmpty(promptBody))
-                    {
-                        break;
-                    }
-
-                    throw new ArgumentException($"Prompt is too long. Max token count is {maxTokenCount}, but prompt is {newTokenCount} tokens long.");
-                }
-
-                promptBody = newPromptBody;
-                currentTokenCount = newTokenCount;
-            }
-
-            var prompt = $"{promptBody}{promptSuffix}";
-            var numTokens = GetTokenCount(prompt);
-
-            //TODO ？？
-            //modelOptions.max_tokens = Math.min(maxContextTokens - numTokens, maxResponseTokens);
-
-            return prompt;
-        }
-
-        public List<JObject> BuildChatPayload(List<Message> messages, string parentMessageId, SendSystemType sendSystemType = SendSystemType.None, string sendSystemMessage = "")
-        {
-            var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
-
-            string systemMessage = string.Empty;
-
-            if (sendSystemType == SendSystemType.BaseMessage)
-            {
-                var currentDateString = DateTime.Now.ToString("MMMM d, yyyy");
-                systemMessage = $"You are ChatGPT, a large language model trained by OpenAI.\nCurrent date: {currentDateString}";
-            } 
-            else if (sendSystemType == SendSystemType.Custom && !string.IsNullOrWhiteSpace(sendSystemMessage))
-            {
-                systemMessage = sendSystemMessage;
-            }
 
             var payload = new List<JObject>();
 
             bool isFirstMessage = true;
-            int currentTokenCount = systemMessage != null ? (GetTokenCount(systemMessage) + Settings.MessageTokenOffset) : 0;
+            int currentTokenCount = systemPrompt != null ? (GetTokenCount(systemPrompt) + Settings.MessageTokenOffset) : 0;
             int maxTokenCount = Settings.MaxPromptTokens;
 
             //If the current token count has not exceeded and there are still messages in orderedMessages, continue. 
@@ -343,17 +299,8 @@ namespace ChatGPTSharp
                 orderedMessages.Remove(message);
 
                 string? messageString = message.Content;
-                if (message.Role == "User")
-                {
-                    if (Settings.UserLabel != null)
-                    {
-                        messageString = $"{Settings.UserLabel}:\n{messageString}";
-                    }
-                    if (Settings.ChatGptLabel != null)
-                    {
-                        messageString = $"{messageString}\n{Settings.ChatGptLabel}:\n";
-                    }
-                }
+
+                //TODO 
 
                 int newTokenCount = GetTokenCount(messageString!) + currentTokenCount + Settings.MessageTokenOffset;
                 if (newTokenCount > maxTokenCount)
@@ -374,13 +321,13 @@ namespace ChatGPTSharp
                 currentTokenCount = newTokenCount;
             }
 
-            if (!string.IsNullOrEmpty(systemMessage))
+            if (!string.IsNullOrEmpty(prompt))
             {
                 //Insert a system message before the last message.
                 payload.Insert(payload.Count - 1, new JObject()
                 {
                     { "role", "system" },
-                    { "content", systemMessage }
+                    { "content", prompt }
                 });
             }
             if (Settings.IsDebug)
@@ -393,18 +340,16 @@ namespace ChatGPTSharp
 
         private int GetTokenCount(string text)
         {
-            text = Regex.Replace(text, "<|im_end|>", "");
-            text = Regex.Replace(text, "<|im_sep|>", "");
             return _tiktoken.Encode(text).Count;
         }
 
-        private static List<Message> GetMessagesForConversation(List<Message> messages, string parentMessageId)
+        private static List<ChatMessage> GetMessagesForConversation(List<ChatMessage> messages, string parentMessageId)
         {
-            List<Message> orderedMessages = new List<Message>();
+            List<ChatMessage> orderedMessages = new List<ChatMessage>();
             string? currentMessageId = parentMessageId;
             while (currentMessageId != null)
             {
-                Message message = messages.Find(m => m.Id == currentMessageId);
+                ChatMessage message = messages.Find(m => m.Id == currentMessageId);
                 if (message == null)
                 {
                     break;

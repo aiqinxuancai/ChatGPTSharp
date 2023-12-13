@@ -19,7 +19,7 @@ namespace ChatGPTSharp.Sample
 
             var sysMsg = "你将作为翻译官，请将以下内容翻译为中文，不要添加解释：\n"+
                 file.Substring(0, file.Length / 4);
-            var msg = await client.SendMessage(sysMsg, sendSystemType: Model.SendSystemType.None);
+            var msg = await client.SendMessage(sysMsg);
         }
     }
 }

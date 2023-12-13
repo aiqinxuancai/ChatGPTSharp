@@ -1,39 +1,30 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace ChatGPTSharp.Model
 {
-    public enum SendSystemType
+    public enum ContentType
     {
-        /// <summary>
-        /// dont send
-        /// </summary>
         None,
-
-        /// <summary>
-        /// send "You are ChatGPT, a large language model trained by OpenAI.Current date: time"
-        /// </summary>
-        BaseMessage,
-
-        /// <summary>
-        /// Custom
-        /// </summary>
-        Custom
+        Text,
+        ImageUrl,
     }
 
     public class Conversation
     {
-        public List<Message> Messages { get; set; } = new List<Message>();
+        public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
         public long CreatedAt { get; set; }
     }
 
-    public class Message
+    public class ChatMessage
     {
         public string? Id { get; set; }
         public string? ParentMessageId { get; set; }
         public string? Role { get; set; }
-        public string? Content { get; set; }
+        public JObject Content { get; set; }
 
         /// <summary>
         /// only reply message
