@@ -6,40 +6,33 @@ using TiktokenSharp;
 Console.WriteLine("Hello, World!");
 
 
+var t = TikToken.EncodingForModel("gpt-3.5-turbo-0613");
 
-//await GetMovieTitle.Test();
+var t1 = t.Encode("Hello");
+var t2 = t.Encode("Hello! How can I assist you today?");
+var t3 = t.Encode("Have you eaten today?");
+var t4 = t.Encode("As an artificial intelligence, I don't eat or drink. I'm here to help you. How can I assist you today?");
 
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-4", timeoutSeconds: 1000);
+
+ChatGPTClientSettings settings = new ChatGPTClientSettings();
+settings.OpenAIToken = File.ReadAllText("KEY.txt");
+settings.ModelName = "gpt-3.5-turbo-0613";
+settings.ProxyUri = "http://127.0.0.1:1081";
+
+//settings.APIURL = "";
+var client = new ChatGPTClient(settings);
 client.IsDebug = true;
-var msg = await client.SendMessage("我接下来说一个数值，你把这个数值加上9527后再返回给我");
+
+
+var prompt = "";
+
+var msg = await client.SendMessage("Hello", systemPrompt: prompt);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-var msg2 = await client.SendMessage("5", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg2.Response}  {msg2.ConversationId}, {msg2.MessageId}");
-
-
-
-//var clientN = new ChatGPTClient(File.ReadAllText("KEY.txt"));
-//var msg3 = await clientN.SendMessage("Hello");
-//Console.WriteLine($"{msg3.Response}  {msg3.ConversationId}, {msg3.MessageId}");
-//var msg4 = await clientN.SendMessage("Who are you", msg3.ConversationId, msg3.MessageId);
-//Console.WriteLine($"{msg4.Response}  {msg4.ConversationId}, {msg4.MessageId}");
-
-
-//GPT3Token.getToken();
-
-//int tokenCount = 0;
-//double usdor = 1 / 0.0018 * 1000;
-//int count = (int)usdor / 12873;
-//while (true)
-//{
-//    await Translator.Test();
-//    tokenCount += 12873;
-
-//    if (tokenCount > usdor)
-//    {
-//        break;
-//    }
-//    Console.WriteLine($"使用token：{tokenCount} 次数：{tokenCount / 12873}");
-//}
+msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 
 

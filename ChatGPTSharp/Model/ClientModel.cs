@@ -13,6 +13,13 @@ namespace ChatGPTSharp.Model
         ImageUrl,
     }
 
+    public enum RoleType
+    {
+        User,
+        Assistant,
+        System,
+    }
+
     public class Conversation
     {
         public List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
@@ -23,8 +30,8 @@ namespace ChatGPTSharp.Model
     {
         public string? Id { get; set; }
         public string? ParentMessageId { get; set; }
-        public string? Role { get; set; }
-        public JObject Content { get; set; }
+        public RoleType Role { get; set; }
+        public JToken Content { get; set; }
 
         /// <summary>
         /// only reply message
@@ -39,7 +46,7 @@ namespace ChatGPTSharp.Model
 
     public class ConversationResult
     {
-        public string? Response { get; set; }
+        public JToken? Response { get; set; }
         public string? ConversationId { get; set; }
         public string? MessageId { get; set; }
         public string? Details { get; set; }

@@ -1,16 +1,21 @@
 ﻿using System;
-using System.Buffers.Text;
-using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
-using System.Text;
-using static ChatGPTSharp.Utils.MakeContent;
+
+
 
 namespace ChatGPTSharp.Model
 {
 
 
+    public enum ImageDetailMode
+    {
+        Auto,
+        Low,
+        High,
+    }
 
-    internal class ChatImageContent
+    public class ChatImageContent
     {
         public string Url { get; set; }
 
@@ -19,16 +24,12 @@ namespace ChatGPTSharp.Model
         {
             ChatImageContent chatImageContent = new ChatImageContent();
             string base64ImageRepresentation = Convert.ToBase64String(imageBytes);
+
+            //var (width, height) = GetImageDimensions(imageBytes);
+            //Console.WriteLine($"Width: {width}, Height: {height}");
+            //获取图片的
+
             chatImageContent.Url = $"data:image/jpeg;base64,{base64ImageRepresentation}";
-            return chatImageContent;
-
-
-        }
-
-        public static ChatImageContent CreateWithBase64(string base64)
-        {
-            ChatImageContent chatImageContent = new ChatImageContent();
-            chatImageContent.Url = $"data:image/jpeg;base64,{base64}";
             return chatImageContent;
         }
 
@@ -39,10 +40,22 @@ namespace ChatGPTSharp.Model
             return chatImageContent;
         }
 
-        public static ChatImageContent CreateWithFilePath(string path)
+        public static ChatImageContent CreateWithFile(string filePath)
         {
-            var image = File.ReadAllBytes(path);
+            var image = File.ReadAllBytes(filePath);
             return CreateWithBytes(image);
+        }
+
+
+        public static (int width, int height) GetImageDimensions(byte[] imageBytes)
+        {
+            using (MemoryStream ms = new MemoryStream(imageBytes))
+            {
+                using (Image image = Image.FromStream(ms))
+                {
+                    return (image.Width, image.Height);
+                }
+            }
         }
 
         public static int CalculateImageTokens(int width, int height, ImageDetailMode detailMode)

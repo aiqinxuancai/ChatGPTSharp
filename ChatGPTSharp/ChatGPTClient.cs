@@ -15,6 +15,7 @@ using System.Data;
 using System.Net;
 using TiktokenSharp;
 using System.Runtime;
+using Newtonsoft.Json.Serialization;
 
 namespace ChatGPTSharp
 {
@@ -115,7 +116,7 @@ namespace ChatGPTSharp
             string conversationId = "", 
             string parentMessageId = "", 
             string systemPrompt = "", 
-            List<string>? images = null)
+            List<ChatImageContent>? images = null)
         {
             try
             {
@@ -132,46 +133,46 @@ namespace ChatGPTSharp
                     };
                 }
 
-                JToken content;
+                JToken content = new JValue("");  //JTokenType.String;
 
                 if (_isVisionModel)
                 {
-                    //content.Type = JTokenType.String;
                     var j = new JArray();
                     if (!string.IsNullOrEmpty(message))
                     {
-                        //{
-                        //    "type": "text",
-                        //    "text": "What are in these images? Is there any difference between them?",
-                        //},
                         j.Add(new JObject { { "type", "text" }, { "text", message } });
                     }
-                   
-                    //image token
-                    /*
 
-                            {
-                              "type": "image_url",
-                              "image_url": {
-                                "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg",
-                              },
-                            },
- 
-                     */
+                    if (images != null && images.Count > 0)
+                    {
+                        foreach (ChatImageContent item in images)
+                        {
+                            JObject url = new JObject();
+                            url["url"] = item.Url;
+
+                            JObject imageContent = new JObject
+                                {
+                                    { "type", "image_url" },
+                                    { "image_url", url }
+                                };
+                            j.Add(imageContent);
+                        }
+
+                    }
                 }
                 else
                 {
-                    content = new JValue(message);
+                    content = new JValue(message);  //JTokenType.String;
                 }
                 
 
-                //把当前消息加入会话
                 var userMessage = new ChatMessage
                 {
                     Id = Guid.NewGuid().ToString(),
                     ParentMessageId = parentMessageId,
-                    Role = "User",
+                    Role = RoleType.User,
                     Content = content,
+                    //TODO  UsageTokens = List<ChatMessage> messages 
                 };
 
                 conversation.Messages.Add(userMessage);
@@ -194,8 +195,8 @@ namespace ChatGPTSharp
                 {
                     Id = Guid.NewGuid().ToString(),
                     ParentMessageId = userMessage.Id,
-                    Role = "ChatGPT",
-                    Content = reply,
+                    Role = RoleType.Assistant,
+                    Content = new JValue(reply),
                     UsageTokens = result.SelectToken("usage.completion_tokens").ToObject<int>(),
                     TotalTokens = result.SelectToken("usage.total_tokens").ToObject<int>(),
                 };
@@ -262,17 +263,16 @@ namespace ChatGPTSharp
 
             if (Settings.IsDebug)
             {
-                Console.WriteLine(jsonString);
+                Console.WriteLine("req:" + jsonString);
             }
 
             var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
             var response = await client.PostAsync(uri, content);
 
-
             var resultJsonString = await response.Content.ReadAsStringAsync();
             if (Settings.IsDebug)
             {
-                Console.WriteLine(resultJsonString);
+                Console.WriteLine("rsp:" + resultJsonString);
             }
             response.EnsureSuccessStatusCode();
 
@@ -288,21 +288,42 @@ namespace ChatGPTSharp
             var payload = new List<JObject>();
 
             bool isFirstMessage = true;
-            int currentTokenCount = systemPrompt != null ? (GetTokenCount(systemPrompt) + Settings.MessageTokenOffset) : 0;
+
+            var systemPromptJson = new JObject() { { "role", "system" }, { "content", systemPrompt } };
+
+
+            int currentTokenCount = string.IsNullOrEmpty(systemPrompt) ?  0 : GetTokensForSingleMessage(systemPromptJson);
             int maxTokenCount = Settings.MaxPromptTokens;
 
-            //If the current token count has not exceeded and there are still messages in orderedMessages, continue. 
-            //TODO: Prepare to add restrictions to support setting only the last * messages.
+
             while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
             {
                 var message = orderedMessages.Last();
                 orderedMessages.Remove(message);
 
-                string? messageString = message.Content;
+                var messageString = message.Content;
 
-                //TODO 
+                int newTokenCount = 0;
 
-                int newTokenCount = GetTokenCount(messageString!) + currentTokenCount + Settings.MessageTokenOffset;
+                JObject msgJson = new JObject();
+
+                if (_isVisionModel)
+                {
+                    //TODO newTokenCount = GetTokenCount(messageString!) + currentTokenCount + Settings.MessageTokenOffset;
+                }
+                else
+                {
+                    msgJson = new JObject() { { "role", message.Role == RoleType.User ? "user" : "assistant" }, { "content", messageString } };
+                    var currentMessageToken = GetTokensForSingleMessage(msgJson);
+                    newTokenCount = currentMessageToken + currentTokenCount;
+
+                    if (Settings.IsDebug)
+                    {
+                        Console.WriteLine($"[Tokens]:{msgJson.ToString(Formatting.None)} {currentMessageToken} {newTokenCount}");
+                    }
+
+                }
+
                 if (newTokenCount > maxTokenCount)
                 {
                     if (!isFirstMessage)
@@ -312,27 +333,27 @@ namespace ChatGPTSharp
                     throw new Exception($"Prompt is too long. Max token count is {maxTokenCount}, but prompt is {newTokenCount} tokens long.");
                 }
 
-                payload.Insert(0, new JObject()
-                {
-                    { "role" , message.Role == "User" ? "user" : "assistant" },
-                    { "content" , messageString }
-                });
+                payload.Insert(0, msgJson);
                 isFirstMessage = false;
                 currentTokenCount = newTokenCount;
             }
 
-            if (!string.IsNullOrEmpty(prompt))
+            if (!string.IsNullOrEmpty(systemPrompt))
             {
-                //Insert a system message before the last message.
-                payload.Insert(payload.Count - 1, new JObject()
-                {
-                    { "role", "system" },
-                    { "content", prompt }
-                });
+                payload.Insert(payload.Count - 1, systemPromptJson);
             }
+
+            //from documentation https://platform.openai.com/docs/guides/text-generation/managing-tokens 
+            currentTokenCount += 2;
+
+            //I tested using the method in the documentation and found that the token count calculated using the algorithm in the documentation
+            //is inconsistent with the prompt_tokens returned. I'm not sure if the documentation was not updated in time or if there is another issue.
+            //After adding the following code, it seems to be consistent with prompt_tokens.
+            currentTokenCount = currentTokenCount  - (payload.Count - 1);
+
             if (Settings.IsDebug)
             {
-                Console.WriteLine($"Request expected consume {currentTokenCount} tokens.");
+                Console.WriteLine($"[Prompt Tokens]:{currentTokenCount} MsgCount:{payload.Count}");
             }
             return payload;
         }
@@ -341,6 +362,50 @@ namespace ChatGPTSharp
         private int GetTokenCount(string text)
         {
             return _tiktoken.Encode(text).Count;
+        }
+
+        /// <summary>
+        /// https://platform.openai.com/docs/guides/text-generation/managing-tokens Counting tokens for chat API calls
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <returns></returns>
+        public int GetTokensForMessages(List<JObject> messages)
+        {
+            int num_tokens = 2; 
+            foreach (var message in messages)
+            {
+                num_tokens += GetTokensForSingleMessage(message);
+            }
+            return num_tokens;
+        }
+
+
+        /// <summary>
+        /// https://platform.openai.com/docs/guides/text-generation/managing-tokens Counting tokens for chat API calls
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        private int GetTokensForSingleMessage(JObject message)
+        {
+            int tokens = 4;   // every message follows <im_start>{role/name}\n{content}<im_end>\n
+            foreach (var property in message)
+            {
+                string key = property.Key;
+                string value = property.Value.ToString();
+                var token = GetTokenCount(value);
+                tokens += token;
+                if (Settings.IsDebug)
+                {
+                    Console.WriteLine($"[GetTokensForSingleMessage]:{value} +{token} = {tokens}");
+                }
+
+
+                if (key == "name")
+                {
+                    tokens -= 1;
+                }
+            }
+            return tokens;
         }
 
         private static List<ChatMessage> GetMessagesForConversation(List<ChatMessage> messages, string parentMessageId)

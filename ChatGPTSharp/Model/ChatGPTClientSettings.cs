@@ -4,7 +4,7 @@ using System.Runtime;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace ChatGPTSharp.Model
+namespace ChatGPTSharp
 {
     /// <summary>
     /// init settings
@@ -78,7 +78,7 @@ namespace ChatGPTSharp.Model
 
         private void UpdateCompletionsUrl()
         {
-            UriBuilder uriBuilder = new UriBuilder(OpenAIAPIBaseUri);
+            UriBuilder uriBuilder = new UriBuilder(APIURL);
 
             uriBuilder.Path = "/v1/chat/completions";
 
@@ -112,22 +112,22 @@ namespace ChatGPTSharp.Model
         public bool IsDebug { set; get; }
 
 
-        private string _openAIAPIBaseUri = "https://api.openai.com/";
+        private string _APIURL = "https://api.openai.com/";
 
 
         /// <summary>
         /// Custom base URI for API access, suitable for building reverse proxies. This is not mutually exclusive with ProxyUri, but it is recommended to use only one of them.
         /// </summary>
-        public string OpenAIAPIBaseUri 
+        public string APIURL 
         { 
             set 
             {
-                _openAIAPIBaseUri = value;
+                _APIURL = value;
                 UpdateCompletionsUrl(); 
             } 
             get 
             { 
-                return _openAIAPIBaseUri; 
+                return _APIURL; 
             } 
         }
 
