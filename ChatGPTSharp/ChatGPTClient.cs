@@ -27,11 +27,6 @@ namespace ChatGPTSharp
 
         private TikToken _tiktoken;
 
-        /// <summary>
-        /// gpt-4-vision-preview
-        /// </summary>
-        private bool _isVisionModel;
-
         public bool IsDebug {
             get { return Settings.IsDebug; }
             set { Settings.IsDebug = value; }
@@ -61,7 +56,7 @@ namespace ChatGPTSharp
                  TimeoutSeconds = timeoutSeconds
             };
 
-            _isVisionModel = modelName.Contains("-vision");
+            
             _tiktoken = TikToken.EncodingForModel(settings.ModelName);
 
             Settings = settings;
@@ -135,7 +130,7 @@ namespace ChatGPTSharp
 
                 JToken content = new JValue("");  //JTokenType.String;
 
-                if (_isVisionModel)
+                if (Settings.IsVisionModel)
                 {
                     var j = new JArray();
                     if (!string.IsNullOrEmpty(message))
@@ -159,6 +154,7 @@ namespace ChatGPTSharp
                         }
 
                     }
+                    content = j;
                 }
                 else
                 {
@@ -307,9 +303,18 @@ namespace ChatGPTSharp
 
                 JObject msgJson = new JObject();
 
-                if (_isVisionModel)
+                if (Settings.IsVisionModel)
                 {
-                    //TODO newTokenCount = GetTokenCount(messageString!) + currentTokenCount + Settings.MessageTokenOffset;
+                    msgJson = new JObject() { { "role", message.Role == RoleType.User ? "user" : "assistant" }, { "content", messageString } };
+
+                    var currentMessageToken = GetTokensForSingleMessage(msgJson);
+                    newTokenCount = currentMessageToken + currentTokenCount;
+
+                    if (Settings.IsDebug)
+                    {
+                        Console.WriteLine($"[Tokens]:{msgJson.ToString(Formatting.None)} {currentMessageToken} {newTokenCount}");
+                    }
+
                 }
                 else
                 {
@@ -391,14 +396,37 @@ namespace ChatGPTSharp
             foreach (var property in message)
             {
                 string key = property.Key;
-                string value = property.Value.ToString();
-                var token = GetTokenCount(value);
-                tokens += token;
-                if (Settings.IsDebug)
-                {
-                    Console.WriteLine($"[GetTokensForSingleMessage]:{value} +{token} = {tokens}");
-                }
 
+                if (property.Value?.Type == JTokenType.Array && key == "content")
+                {
+                    foreach (JObject msg in property.Value)
+                    {
+                        if (msg.ContainsKey("type"))
+                        {
+                            string msgType = (string)msg["type"]!;
+                            switch (msgType)
+                            {
+                                case "text":
+                                    var token = GetTokenCount((string)msg["text"]!);
+                                    tokens += token;
+                                    break;
+                                case "image_url":
+                                    //TODO
+                                    break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    string value = property.Value.ToString();
+                    var token = GetTokenCount(value);
+                    tokens += token;
+                    if (Settings.IsDebug)
+                    {
+                        Console.WriteLine($"[GetTokensForSingleMessage]:{value} +{token} = {tokens}");
+                    }
+                }
 
                 if (key == "name")
                 {

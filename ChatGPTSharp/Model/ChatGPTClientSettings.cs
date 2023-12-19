@@ -16,9 +16,9 @@ namespace ChatGPTSharp
         /// <summary>
         /// Model name
         /// </summary>
-        public string ModelName 
-        { 
-            set 
+        public string ModelName
+        {
+            set
             {
                 _modelName = value;
 
@@ -31,7 +31,8 @@ namespace ChatGPTSharp
                 if (match.Success)
                 {
                     var tokens = match.Groups[1].Value;
-                    if (int.TryParse(tokens, out int toukensNumber)) {
+                    if (int.TryParse(tokens, out int toukensNumber))
+                    {
                         MaxContextTokens = toukensNumber * 1024;
                         MaxResponseTokens = 1024;
                         MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
@@ -67,12 +68,15 @@ namespace ChatGPTSharp
                     }
                 }
 
+                _isVisionModel = value.Contains("-vision");
+
                 UpdateCompletionsUrl();
 
             }
-            get { 
-                return _modelName; 
-            } 
+            get
+            {
+                return _modelName;
+            }
         }
 
 
@@ -84,6 +88,10 @@ namespace ChatGPTSharp
 
             CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
         }
+
+        private bool _isVisionModel;
+
+        public bool IsVisionModel { get => _isVisionModel; }
 
 
         /// <summary>
@@ -118,17 +126,17 @@ namespace ChatGPTSharp
         /// <summary>
         /// Custom base URI for API access, suitable for building reverse proxies. This is not mutually exclusive with ProxyUri, but it is recommended to use only one of them.
         /// </summary>
-        public string APIURL 
-        { 
-            set 
+        public string APIURL
+        {
+            set
             {
                 _APIURL = value;
-                UpdateCompletionsUrl(); 
-            } 
-            get 
-            { 
-                return _APIURL; 
-            } 
+                UpdateCompletionsUrl();
+            }
+            get
+            {
+                return _APIURL;
+            }
         }
 
         public string CompletionsUrl { get; private set; } = string.Empty;
@@ -174,7 +182,6 @@ namespace ChatGPTSharp
         /// Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
         /// </summary>
         public double FrequencyPenalty { set; get; } = 0;
-
 
     }
 }

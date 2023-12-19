@@ -6,7 +6,7 @@ using TiktokenSharp;
 Console.WriteLine("Hello, World!");
 
 
-var t = TikToken.EncodingForModel("gpt-3.5-turbo-0613");
+var t = TikToken.EncodingForModel("gpt-4-vision-preview");
 
 var t1 = t.Encode("Hello");
 var t2 = t.Encode("Hello! How can I assist you today?");
@@ -16,7 +16,7 @@ var t4 = t.Encode("As an artificial intelligence, I don't eat or drink. I'm here
 
 ChatGPTClientSettings settings = new ChatGPTClientSettings();
 settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "gpt-3.5-turbo-0613";
+settings.ModelName = "gpt-4-vision-preview";
 settings.ProxyUri = "http://127.0.0.1:1081";
 
 //settings.APIURL = "";
@@ -28,11 +28,11 @@ var prompt = "";
 
 var msg = await client.SendMessage("Hello", systemPrompt: prompt);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+//msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
+//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+//msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
+//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+//msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
+//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 
 
