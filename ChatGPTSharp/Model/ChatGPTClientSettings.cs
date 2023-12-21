@@ -15,7 +15,9 @@ namespace ChatGPTSharp
         private string _modelName = "gpt-3.5-turbo";
 
         /// <summary>
-        /// Model name
+        /// The name of the model. Setting this property automatically adjusts MaxContextTokens, MaxResponseTokens, and MaxPromptTokens based on the model's token capacity. 
+        /// It uses a regular expression to match token quantity in the model name, 
+        /// falls back to a predefined token limit map from OpenAI, and sets default values if no specific token number is found.
         /// </summary>
         public string ModelName
         {
@@ -23,8 +25,7 @@ namespace ChatGPTSharp
             {
                 _modelName = value;
 
-                //TODO auto tokens number, use regex "-(\d+)k\W" * 1024
-
+                // Use a regular expression to match the token count marker in the model name
                 Regex regex = new Regex("-(\\d+)k\\W");
                 var match = regex.Match(_modelName);
                 bool findTokenNumber = false;
@@ -41,7 +42,8 @@ namespace ChatGPTSharp
                     }
                 }
 
-                //update 2023.12.21
+                // Fetch the maximum token table corresponding to models from the OpenAI official website
+                // https://platform.openai.com/docs/models
                 var dict = TokenUtils.GetTokenLimitWithOpenAI();
 
                 if (findTokenNumber == false && dict.ContainsKey(value))
@@ -52,34 +54,11 @@ namespace ChatGPTSharp
                     findTokenNumber = true;
                 }
 
-
-
                 if (!findTokenNumber)
                 {
-                    if (_modelName.StartsWith("gpt-4-32k")) //32768
-                    {
-                        MaxContextTokens = 32768;
-                        MaxResponseTokens = 1024;
-                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                    }
-                    else if (_modelName.StartsWith("gpt-4")) //8192
-                    {
-                        MaxContextTokens = 8192;
-                        MaxResponseTokens = 1024;
-                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                    }
-                    else if (_modelName.StartsWith("gpt-3.5-turbo-16k")) //8192
-                    {
-                        MaxContextTokens = 16384;
-                        MaxResponseTokens = 1024;
-                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                    }
-                    else
-                    {
-                        MaxContextTokens = 4096;
-                        MaxResponseTokens = 1024;
-                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                    }
+                    MaxContextTokens = 4096;
+                    MaxResponseTokens = 1024;
+                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
                 }
 
                 _isVisionModel = value.Contains("-vision");
