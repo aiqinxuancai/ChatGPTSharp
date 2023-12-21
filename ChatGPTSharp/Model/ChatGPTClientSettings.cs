@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ChatGPTSharp.Utils;
+using System;
 using System.Collections.Generic;
 using System.Runtime;
 using System.Text;
@@ -39,6 +40,19 @@ namespace ChatGPTSharp
                         findTokenNumber = true;
                     }
                 }
+
+                //update 2023.12.21
+                var dict = TokenUtils.GetTokenLimitWithOpenAI();
+
+                if (findTokenNumber == false && dict.ContainsKey(value))
+                {
+                    MaxContextTokens = dict[value];
+                    MaxResponseTokens = 1024;
+                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                    findTokenNumber = true;
+                }
+
+
 
                 if (!findTokenNumber)
                 {
@@ -141,11 +155,6 @@ namespace ChatGPTSharp
 
         public string CompletionsUrl { get; private set; } = string.Empty;
 
-
-        /// <summary>
-        /// Reserved token offset
-        /// </summary>
-        public int MessageTokenOffset { set; get; } = 7;
 
         /// <summary>
         /// Use a proxy address to access OpenAI's API, for example: http://127.0.0.1:1080/

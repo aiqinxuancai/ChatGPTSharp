@@ -16,6 +16,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Assets\ModelTokens.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Assets\ModelTokens.json" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="..\LICENSE.txt">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>

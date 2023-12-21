@@ -1,8 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using ChatGPTSharp.Utils;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Runtime;
 using System.Text;
+using TiktokenSharp;
 
 namespace ChatGPTSharp.Model
 {
@@ -30,18 +33,78 @@ namespace ChatGPTSharp.Model
     {
         public string? Id { get; set; }
         public string? ParentMessageId { get; set; }
+
+        public bool IsVisionModel { get; set; }
+
         public RoleType Role { get; set; }
-        public JToken Content { get; set; }
 
-        /// <summary>
-        /// only reply message
-        /// </summary>
-        public int UsageTokens { get; set; }
+        public string? TextContent { get; set; }
 
-        /// <summary>
-        /// The token count of the last requested message, a replacement for GetTokenCount implementation needed for future development.
-        /// </summary>
-        public int TotalTokens { get; set; }
+        public List<ChatImageModel> ImageContent { get; set; } = new List<ChatImageModel> { };
+
+
+        public (JObject body, int tokens) GetTokens (TikToken tikToken)
+        {
+            var body = MessageBody;
+            var textTokens = TokenUtils.GetTokensForSingleMessage(tikToken, body);
+
+            if (ImageContent != null)
+            {
+                foreach (var item in ImageContent)
+                {
+                    textTokens += item.TokensCount;
+                }
+                
+            }
+
+
+            return (body, textTokens);
+        }
+
+        public JObject MessageBody
+        {
+            get
+            {
+                JToken messageBody = new JObject();
+                if (IsVisionModel)
+                {
+                    var j = new JArray();
+                    if (!string.IsNullOrEmpty(TextContent))
+                    {
+                        j.Add(new JObject { { "type", "text" }, { "text", TextContent } });
+                    }
+
+                    if (ImageContent != null && ImageContent.Count > 0)
+                    {
+                        foreach (ChatImageModel item in ImageContent)
+                        {
+                            JObject url = new JObject();
+                            url["url"] = item.Url;
+                            //url["tokensCount"] = item.TokensCount;
+                            JObject imageContent = new JObject
+                                {
+                                    { "type", "image_url" },
+                                    { "image_url", url }
+                                };
+                            j.Add(imageContent);
+                        }
+
+                    }
+                    messageBody = j;
+                }
+                else
+                {
+                    messageBody = new JValue(TextContent);  //JTokenType.String;
+                }
+
+                return new JObject() { { "role", Role == RoleType.User ? "user" : "assistant" }, { "content", messageBody } };
+            }
+        }
+
+
+
+        
+
     }
 
     public class ConversationResult

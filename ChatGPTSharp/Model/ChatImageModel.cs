@@ -15,32 +15,40 @@ namespace ChatGPTSharp.Model
         High,
     }
 
-    public class ChatImageContent
+    public class ChatImageModel
     {
         public string Url { get; set; }
 
+        /// <summary>
+        /// Only local file
+        /// </summary>
+        public int TokensCount { get; set; }
 
-        public static ChatImageContent CreateWithBytes(byte[] imageBytes)
+        public ImageDetailMode Mode { get; set; }
+        
+
+        public static ChatImageModel CreateWithBytes(byte[] imageBytes, ImageDetailMode imageDetailMode = ImageDetailMode.Auto)
         {
-            ChatImageContent chatImageContent = new ChatImageContent();
+            ChatImageModel chatImageContent = new ChatImageModel();
             string base64ImageRepresentation = Convert.ToBase64String(imageBytes);
 
-            //var (width, height) = GetImageDimensions(imageBytes);
-            //Console.WriteLine($"Width: {width}, Height: {height}");
-            //获取图片的
+            var (width, height) = GetImageDimensions(imageBytes);
+            chatImageContent.TokensCount = CalculateImageTokens(width, height, imageDetailMode);
 
+            chatImageContent.Mode = imageDetailMode;
             chatImageContent.Url = $"data:image/jpeg;base64,{base64ImageRepresentation}";
             return chatImageContent;
         }
 
-        public static ChatImageContent CreateWithUrl(string url)
+        public static ChatImageModel CreateWithUrl(string url, ImageDetailMode imageDetailMode = ImageDetailMode.Auto)
         {
-            ChatImageContent chatImageContent = new ChatImageContent();
+            ChatImageModel chatImageContent = new ChatImageModel();
             chatImageContent.Url = url;
+            chatImageContent.Mode = imageDetailMode;
             return chatImageContent;
         }
 
-        public static ChatImageContent CreateWithFile(string filePath)
+        public static ChatImageModel CreateWithFile(string filePath, ImageDetailMode imageDetailMode = ImageDetailMode.Auto)
         {
             var image = File.ReadAllBytes(filePath);
             return CreateWithBytes(image);
@@ -70,17 +78,8 @@ namespace ChatGPTSharp.Model
 
             if (detailMode == ImageDetailMode.Auto)
             {
-                if (width > squareSize || height > squareSize) //Be verified
-                {
-                    detailMode = ImageDetailMode.High;
-                }
-                else
-                {
-                    detailMode = ImageDetailMode.Low;
-                }
-
+                detailMode = ImageDetailMode.High;
             }
-
 
             if (detailMode == ImageDetailMode.Low)
             {
@@ -88,18 +87,24 @@ namespace ChatGPTSharp.Model
             }
             else if (detailMode == ImageDetailMode.High)
             {
+                bool scaledToMax = false;
+
                 // Scale down the image if either dimension exceeds the maximum allowed.
                 if (width > maxDimension || height > maxDimension)
                 {
                     double scaleFactor = Math.Min((double)maxDimension / width, (double)maxDimension / height);
                     width = (int)(width * scaleFactor);
                     height = (int)(height * scaleFactor);
+                    scaledToMax = true;
                 }
 
-                // Further scale down the image such that the shortest side is 768px long.
-                double scaleToShortestSideFactor = (double)targetShortSide / Math.Min(width, height);
-                width = (int)(width * scaleToShortestSideFactor);
-                height = (int)(height * scaleToShortestSideFactor);
+                // Further scale down the image only if it has been scaled in the previous step.
+                if (scaledToMax)
+                {
+                    double scaleToShortestSideFactor = (double)targetShortSide / Math.Min(width, height);
+                    width = (int)(width * scaleToShortestSideFactor);
+                    height = (int)(height * scaleToShortestSideFactor);
+                }
 
                 // Calculate how many 512px squares are needed to cover the image.
                 int squaresAcross = (int)Math.Ceiling((double)width / squareSize);
@@ -112,6 +117,7 @@ namespace ChatGPTSharp.Model
 
             return lowDetailCost;
         }
+
 
     }
 }
