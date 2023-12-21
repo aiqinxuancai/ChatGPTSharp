@@ -10,6 +10,7 @@ namespace ChatGPTSharp.Model
 
     public enum ImageDetailMode
     {
+        None,
         Auto,
         Low,
         High,
@@ -27,7 +28,7 @@ namespace ChatGPTSharp.Model
         public ImageDetailMode Mode { get; set; }
         
 
-        public static ChatImageModel CreateWithBytes(byte[] imageBytes, ImageDetailMode imageDetailMode = ImageDetailMode.Auto)
+        public static ChatImageModel CreateWithBytes(byte[] imageBytes, ImageDetailMode imageDetailMode = ImageDetailMode.None)
         {
             ChatImageModel chatImageContent = new ChatImageModel();
             string base64ImageRepresentation = Convert.ToBase64String(imageBytes);
@@ -40,7 +41,7 @@ namespace ChatGPTSharp.Model
             return chatImageContent;
         }
 
-        public static ChatImageModel CreateWithUrl(string url, ImageDetailMode imageDetailMode = ImageDetailMode.Auto)
+        public static ChatImageModel CreateWithUrl(string url, ImageDetailMode imageDetailMode = ImageDetailMode.None)
         {
             ChatImageModel chatImageContent = new ChatImageModel();
             chatImageContent.Url = url;
@@ -48,10 +49,10 @@ namespace ChatGPTSharp.Model
             return chatImageContent;
         }
 
-        public static ChatImageModel CreateWithFile(string filePath, ImageDetailMode imageDetailMode = ImageDetailMode.Auto)
+        public static ChatImageModel CreateWithFile(string filePath, ImageDetailMode imageDetailMode = ImageDetailMode.None)
         {
             var image = File.ReadAllBytes(filePath);
-            return CreateWithBytes(image);
+            return CreateWithBytes(image, imageDetailMode);
         }
 
 
@@ -76,9 +77,9 @@ namespace ChatGPTSharp.Model
             const int squareSize = 512;
 
 
-            if (detailMode == ImageDetailMode.Auto)
+            if (detailMode == ImageDetailMode.None)
             {
-                detailMode = ImageDetailMode.High;
+                detailMode = ImageDetailMode.High; //
             }
 
             if (detailMode == ImageDetailMode.Low)

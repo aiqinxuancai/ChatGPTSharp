@@ -147,7 +147,7 @@ namespace ChatGPTSharp
                 var resultJsonString = string.Empty;
 
                 var messages = BuildChatPayload(conversation.Messages, userMessage.Id, systemPrompt);
-                var data = await PostData(messages.Item1); //SendMessage
+                var data = await PostData(messages.message); //SendMessage
                 result = data.result;
                 reply = (string?)result.SelectToken("choices[0].message.content");
                 resultJsonString = data.source;
@@ -222,14 +222,15 @@ namespace ChatGPTSharp
             req["presence_penalty"] = Settings.PresencePenalty;
             req["frequency_penalty"] = Settings.FrequencyPenalty;
 
-
+            //https://platform.openai.com/docs/guides/vision
             //Currently, GPT-4 Turbo with vision does not support the message.name parameter,
             //functions/tools, response_format parameter,
             //and we currently set a low max_tokens default which you can override.
-            if (Settings.IsVisionModel) 
+            if (!Settings.DontLimitResponseTokens && Settings.MaxResponseTokens > 0)
             {
                 req["max_tokens"] = Settings.MaxResponseTokens;
             }
+
 
             req["messages"] = new JArray(((List<JObject>)obj).ToArray());
 
@@ -257,7 +258,7 @@ namespace ChatGPTSharp
             return (result, resultJsonString);
         }
 
-        public (List<JObject> message, List<ChatMessage> selectedMessages, int tokensCount) BuildChatPayload(List<ChatMessage> messages, string parentMessageId, string systemPrompt = "")
+        public (List<JObject> message, int tokensCount) BuildChatPayload(List<ChatMessage> messages, string parentMessageId, string systemPrompt = "")
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
 
@@ -268,9 +269,12 @@ namespace ChatGPTSharp
             var systemPromptJson = new JObject() { { "role", "system" }, { "content", systemPrompt } };
 
             int currentTokenCount = string.IsNullOrEmpty(systemPrompt) ?  0 : TokenUtils.GetTokensForSingleMessage(_tiktoken, systemPromptJson);
-            int maxTokenCount = Settings.MaxPromptTokens;
 
-            List<ChatMessage> selectedMessages = new List<ChatMessage>();
+            int maxTokenCount = Settings.MaxPromptTokens;
+            if (Settings.DontLimitPromptTokens || maxTokenCount <= 0)
+            {
+                maxTokenCount = Settings.MaxContextTokens;
+            }
 
             while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
             {
@@ -291,8 +295,7 @@ namespace ChatGPTSharp
                 }
 
                 payload.Insert(0, tokensResult.body);
-                
-                selectedMessages.Add(message);
+
                 isFirstMessage = false;
                 currentTokenCount = newTokenCount;
             }
@@ -314,7 +317,7 @@ namespace ChatGPTSharp
             {
                 Console.WriteLine($"[Prompt Tokens]:{currentTokenCount} MsgCount:{payload.Count}");
             }
-            return (payload, selectedMessages, currentTokenCount);
+            return (payload, currentTokenCount);
         }
 
 

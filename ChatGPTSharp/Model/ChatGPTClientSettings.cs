@@ -114,19 +114,29 @@ namespace ChatGPTSharp
         public string OpenAIToken { set; get; } = string.Empty;
 
         /// <summary>
-        /// The maximum total number of tokens. After setting ModelName, this configuration will be automatically updated. If you need to customize it, please modify it after setting ModelName.
+        /// The maximum total number of tokens. This configuration is automatically updated after setting ModelName. 
+        /// To customize it, modify it post-ModelName configuration.
         /// </summary>
         public int MaxContextTokens { set; get; } = 4096;
 
         /// <summary>
-        /// The maximum number of tokens that the API returns. Usually kept at 1024. If you want to include more prompts as much as possible, you can consider modifying this value. After setting ModelName, this configuration will be automatically updated. If you need to customize it, please modify it after setting ModelName.
+        /// The maximum number of tokens that the API returns. Typically set to 1024. 
+        /// Consider modifying this value to include more prompts if needed. 
+        /// This configuration is automatically updated after setting ModelName. 
+        /// To customize it, modify it post-ModelName configuration.
+        /// A value less than or equal to 0 indicates no limit.
         /// </summary>
         public int MaxResponseTokens { set; get; } = 1024;
 
         /// <summary>
-        /// The maximum number of Prompt tokens. Usually kept as MaxContextTokens - MaxResponseTokens. If you want to include more prompts as much as possible, you can consider increasing this value and reducing MaxResponseTokens. After setting ModelName, this configuration will be automatically updated. If you need to customize it, please modify it after setting ModelName.
+        /// The maximum number of Prompt tokens. Typically set as MaxContextTokens minus MaxResponseTokens. 
+        /// To maximize prompt inclusion, consider increasing this value while reducing MaxResponseTokens. 
+        /// This configuration is automatically updated after setting ModelName. 
+        /// To customize it, modify it post-ModelName configuration.
+        /// A value less than or equal to 0 will default to the maximum token amount.
         /// </summary>
         public int MaxPromptTokens { set; get; } = 3072;
+
 
         /// <summary>
         /// Whether to output debug information in the console
@@ -136,9 +146,11 @@ namespace ChatGPTSharp
 
         private string _APIURL = "https://api.openai.com/";
 
-
         /// <summary>
-        /// Custom base URI for API access, suitable for building reverse proxies. This is not mutually exclusive with ProxyUri, but it is recommended to use only one of them.
+        /// Sets a custom base URI for accessing the API, useful for scenarios requiring a reverse proxy for network configurations or specific deployment requirements. 
+        /// The default value is "https://api.openai.com/". 
+        /// This property can be used alongside ProxyUri, but it is generally recommended to use only one to avoid potential routing conflicts or redundancy. 
+        /// Adjusting this property also updates the internal API completion URLs.
         /// </summary>
         public string APIURL
         {
@@ -157,14 +169,17 @@ namespace ChatGPTSharp
 
 
         /// <summary>
-        /// Use a proxy address to access OpenAI's API, for example: http://127.0.0.1:1080/
+        /// Specifies a proxy address for accessing OpenAI's API. 
+        /// This can be useful for routing requests through a specific network configuration or for accessing the API from regions with restricted internet access. 
+        /// For example, use "http://127.0.0.1:1080/" to direct requests through a local proxy server.
         /// </summary>
         public string ProxyUri { set; get; } = string.Empty;
 
         /// <summary>
-        /// Timeout period. In GPT-4, it is recommended to set a higher value due to congestion.
+        /// Timeout seconds.
         /// </summary>
         public uint TimeoutSeconds { set; get; } = 60;
+
 
         /// <summary>
         /// Defaults to 1

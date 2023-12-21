@@ -80,6 +80,27 @@ namespace ChatGPTSharp.Model
                         {
                             JObject url = new JObject();
                             url["url"] = item.Url;
+
+                            switch (item.Mode)
+                            {
+                                case ImageDetailMode.Auto:
+                                    {
+                                        url["detail"] = "auto";
+                                        break;
+                                    }
+                                case ImageDetailMode.Low:
+                                    {
+                                        url["detail"] = "low";
+                                        break;
+                                    }
+                                case ImageDetailMode.High:
+                                    {
+                                        url["detail"] = "high";
+                                        break;
+                                    }
+
+                            }
+
                             //url["tokensCount"] = item.TokensCount;
                             JObject imageContent = new JObject
                                 {
