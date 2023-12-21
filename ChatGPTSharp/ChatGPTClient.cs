@@ -226,7 +226,7 @@ namespace ChatGPTSharp
             //Currently, GPT-4 Turbo with vision does not support the message.name parameter,
             //functions/tools, response_format parameter,
             //and we currently set a low max_tokens default which you can override.
-            if (!Settings.DontLimitResponseTokens && Settings.MaxResponseTokens > 0)
+            if (Settings.MaxResponseTokens > 0)
             {
                 req["max_tokens"] = Settings.MaxResponseTokens;
             }
@@ -271,7 +271,7 @@ namespace ChatGPTSharp
             int currentTokenCount = string.IsNullOrEmpty(systemPrompt) ?  0 : TokenUtils.GetTokensForSingleMessage(_tiktoken, systemPromptJson);
 
             int maxTokenCount = Settings.MaxPromptTokens;
-            if (Settings.DontLimitPromptTokens || maxTokenCount <= 0)
+            if (maxTokenCount <= 0)
             {
                 maxTokenCount = Settings.MaxContextTokens;
             }
