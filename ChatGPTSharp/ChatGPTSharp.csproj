@@ -4,13 +4,13 @@
 		<TargetFrameworks>netstandard2.1;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<Description>This project supports the real ChatGPT model "gpt-3.5-turbo", and the previous generation model "text-davinci-003", both with continuous dialog capability.</Description>
+		<Description>Supports GPT-4V, GPT-3.5 models; auto-calculates request tokens; enables continuous dialogues with conversation IDs; now includes Vision model image sending.</Description>
 		<PackageProjectUrl>https://github.com/aiqinxuancai/ChatGPTSharp</PackageProjectUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
 		<PackageTags>chatgpt;openai</PackageTags>
 		<Title>ChatGPTSharp</Title>
-		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">1.1.4</VersionPrefix>
+		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">2.0.0-alpha.2</VersionPrefix>
 		<UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	</PropertyGroup>
