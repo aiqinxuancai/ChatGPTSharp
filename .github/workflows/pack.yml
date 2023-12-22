@@ -11,6 +11,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'  # 检出子模块
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
