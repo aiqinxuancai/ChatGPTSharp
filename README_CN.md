@@ -29,6 +29,12 @@ var msg = await client.SendMessage("{[小王][特朗普还能再当总统吗？]
 
 ## Update
 
+### 2.0.0 20231221
+* 支持Vision model的图片发送，并预先计算图片token（仅本地文件）
+* 改进消息的token算法，使其与官方接口一致
+* 增加更多官网模型的默认token数量数据，以及自动转换模型名称中的16k字样为最大token
+* 鉴于模型的token数量越来越大，支持不限制的MaxResponseTokens、MaxPromptTokens的方法，将其设置为0既可
+
 ### 1.1.4 20230711
 * 支持gpt-3.5-turbo-16k
 

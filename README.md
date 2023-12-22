@@ -29,6 +29,12 @@ var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", 
 
 ## Update
 
+### 2.0.0 20231221
+* Added support for sending images using the Vision model and pre-computing image tokens (local files only).
+* Improved the token algorithm for messages to align with the official API.
+* Added more default token count data for official website models and automatic conversion of '16k' in model names to maximum tokens.
+* Considering the increasing number of tokens in models, introduced a method to support unlimited MaxResponseTokens and MaxPromptTokens. Setting them to 0 will remove the limit.
+
 ### 1.1.4 20230711
 * Add support gpt-3.5-turbo-16k
  
