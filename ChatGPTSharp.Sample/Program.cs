@@ -11,24 +11,21 @@ settings.OpenAIToken = File.ReadAllText("KEY.txt");
 settings.ModelName = "gpt-4-vision-preview";
 settings.ProxyUri = "http://127.0.0.1:1081";
 
-
 var client = new ChatGPTClient(settings);
 client.IsDebug = true;
-
 
 var ChatImageModels = new List<ChatImageModel>()
 {
     ChatImageModel.CreateWithFile(@"C:\Users\aiqin\Pictures\20231221155547.png", ImageDetailMode.Low)
 };
 
-
 var systemPrompt = "";
 var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 
 
-//msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
-//Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 //msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);
 //Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 //msg = await client.SendMessage("Really?", msg.ConversationId, msg.MessageId, systemPrompt: prompt);

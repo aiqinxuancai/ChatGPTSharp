@@ -10,22 +10,26 @@ ChatGPTSharp is available as [NuGet package](https://www.nuget.org/packages/Chat
 
 Use ConversationId for continuous conversations.
 ```csharp
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
+ChatGPTClientSettings settings = new ChatGPTClientSettings();
+settings.OpenAIToken = File.ReadAllText("KEY.txt");
+settings.ModelName = "gpt-4-vision-preview";
+settings.ProxyUri = "http://127.0.0.1:1081";
 
-var msgFirst = await client.SendMessage("Hello, My name is Sin");
-Console.WriteLine($"{msgLast.Response}");
+var client = new ChatGPTClient(settings);
+client.IsDebug = true;
 
-var msgLast = await client.SendMessage("My name is?", msgFirst.ConversationId, msgFirst.MessageId);
-Console.WriteLine($"{msgLast.Response}");
+var ChatImageModels = new List<ChatImageModel>()
+{
+    ChatImageModel.CreateWithFile(@"C:\Users\aiqin\Pictures\20231221155547.png", ImageDetailMode.Low)
+};
+
+var systemPrompt = "";
+var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
+Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 ```
 
-Use prompt to constrain ChatGPT behavior.
-```csharp
-var client = new ChatGPTClient(File.ReadAllText("KEY.txt"), "gpt-3.5-turbo");
-var sysMsg = "You will review group messages as a group administrator, and I will inform you in the format of {[who][said what]} to reply with a number from 0 to 10 to indicate the severity of political content in their speech, such as "0". No need to reply with any other unnecessary content, such as no political content or inability to understand the defense. Please note that group members may be cunning and use pinyin, initials, homophones, abbreviations, etc., to describe things to avoid scrutiny.";
-
-var msg = await client.SendMessage("{[MrWang][Can Trump be president again?]}", sendSystemType: Model.SendSystemType.Custom, sendSystemMessage: sysMsg);
-```
 
 ## Update
 
