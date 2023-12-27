@@ -1,6 +1,6 @@
 # ChatGPTSharp
 
-本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持模型gpt-4、gpt-3.5-turbo、text-davinci-003。
+本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持模型`gpt-4`、`gpt-4-vision-preview`、`gpt-3.5-turbo`。
 
 ## 开始使用
 
