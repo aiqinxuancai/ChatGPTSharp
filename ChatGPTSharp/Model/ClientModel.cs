@@ -130,7 +130,7 @@ namespace ChatGPTSharp.Model
 
     public class ConversationResult
     {
-        public JToken? Response { get; set; }
+        public string? Response { get; set; }
         public string? ConversationId { get; set; }
         public string? MessageId { get; set; }
         public string? Details { get; set; }

@@ -38,7 +38,7 @@ namespace ChatGPTSharp.Sample
             for (int i = 0; i < 100; i++)
             {
                 var msg = await client.SendMessage($"{kSystemMessage}{titleFull}");
-                Console.WriteLine(msg.Response["title"]);
+                Console.WriteLine(msg.Response);
             }
         }
     }
