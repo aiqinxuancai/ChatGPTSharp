@@ -10,7 +10,7 @@
 		<RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
 		<PackageTags>chatgpt;openai</PackageTags>
 		<Title>ChatGPTSharp</Title>
-		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">2.0.3</VersionPrefix>
+		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">2.0.4</VersionPrefix>
 		<UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	</PropertyGroup>
@@ -40,7 +40,7 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0'">
-		<PackageReference Include="IndexRange" Version="1.0.2" />
+		<PackageReference Include="IndexRange" Version="1.0.3" />
 		<PackageReference Include="TA.System.Runtime.CompilerServices.RuntimeHelpers.GetSubArray" Version="1.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -49,7 +49,7 @@
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
-		<PackageReference Include="TiktokenSharp" Version="1.1.0" />
+		<PackageReference Include="TiktokenSharp" Version="1.1.4" />
 	</ItemGroup>
 
 </Project>
