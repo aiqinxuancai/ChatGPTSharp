@@ -57,9 +57,7 @@ namespace ChatGPTSharp
                  TimeoutSeconds = timeoutSeconds
             };
 
-            
             _tiktoken = TikToken.EncodingForModel(settings.ModelName);
-
             Settings = settings;
         }
 
@@ -81,9 +79,10 @@ namespace ChatGPTSharp
         }
 
 
+        #region mark custom conversationId
 
         /// <summary>
-        /// clear conversation
+        /// Clear conversation
         /// </summary>
         /// <param name="conversationId"></param>
         /// <returns></returns>
@@ -97,8 +96,6 @@ namespace ChatGPTSharp
             return false;
         }
 
-
-
         /// <summary>
         /// SendMessage
         /// </summary>
@@ -108,10 +105,10 @@ namespace ChatGPTSharp
         /// <param name="systemPrompt">https://platform.openai.com/docs/guides/chat </param>
         /// <param name="images">set a local image file or an image URL; if it is a local image, it will be converted to base64 for transmission.</param>
         /// <returns></returns>
-        public async Task<ConversationResult> SendMessage(string message, 
-            string conversationId = "", 
-            string parentMessageId = "", 
-            string systemPrompt = "", 
+        public async Task<ConversationResult> SendMessage(string message,
+            string conversationId = "",
+            string parentMessageId = "",
+            string systemPrompt = "",
             List<ChatImageModel>? images = null)
         {
             try
@@ -129,7 +126,7 @@ namespace ChatGPTSharp
                     };
                 }
 
-     
+
                 var userMessage = new ChatMessage
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -193,6 +190,13 @@ namespace ChatGPTSharp
             }
 
         }
+
+
+        /// <summary>
+        /// Post List<JObject> data.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         private async Task<(JObject result, string source)> PostData(object obj)
         {
             var httpClientHandler = new HttpClientHandler();
@@ -231,10 +235,7 @@ namespace ChatGPTSharp
                 req["max_tokens"] = Settings.MaxResponseTokens;
             }
 
-
             req["messages"] = new JArray(((List<JObject>)obj).ToArray());
-
-            
 
             var jsonString = req.ToString();
 
@@ -268,7 +269,7 @@ namespace ChatGPTSharp
 
             var systemPromptJson = new JObject() { { "role", "system" }, { "content", systemPrompt } };
 
-            int currentTokenCount = string.IsNullOrEmpty(systemPrompt) ?  0 : TokenUtils.GetTokensForSingleMessage(_tiktoken, systemPromptJson);
+            int currentTokenCount = string.IsNullOrEmpty(systemPrompt) ? 0 : TokenUtils.GetTokensForSingleMessage(_tiktoken, systemPromptJson);
 
             int maxTokenCount = Settings.MaxPromptTokens;
             if (maxTokenCount <= 0)
@@ -311,7 +312,7 @@ namespace ChatGPTSharp
             //I tested using the method in the documentation and found that the token count calculated using the algorithm in the documentation
             //is inconsistent with the prompt_tokens returned. I'm not sure if the documentation was not updated in time or if there is another issue.
             //After adding the following code, it seems to be consistent with prompt_tokens.
-            currentTokenCount = currentTokenCount  - (payload.Count - 1);
+            currentTokenCount = currentTokenCount - (payload.Count - 1);
 
             if (Settings.IsDebug)
             {
@@ -319,10 +320,6 @@ namespace ChatGPTSharp
             }
             return (payload, currentTokenCount);
         }
-
-
-
-        
 
         private static List<ChatMessage> GetMessagesForConversation(List<ChatMessage> messages, string parentMessageId)
         {
@@ -340,9 +337,12 @@ namespace ChatGPTSharp
             }
             return orderedMessages;
         }
+        #endregion
 
 
-        
+
+
+
 
     }
 

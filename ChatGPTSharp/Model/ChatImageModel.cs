@@ -16,7 +16,7 @@ namespace ChatGPTSharp.Model
         High,
     }
 
-    public class ChatImageModel
+    public class ChatImageModel: ChatModel
     {
         public string Url { get; set; }
 
