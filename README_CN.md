@@ -1,6 +1,6 @@
 # ChatGPTSharp
 
-本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持模型`gpt-4`、`gpt-4-vision-preview`、`gpt-3.5-turbo`。
+本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持OpenAI所有模型。
 
 ## 开始使用
 
@@ -10,7 +10,7 @@
 ```csharp
 ChatGPTClientSettings settings = new ChatGPTClientSettings();
 settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "gpt-4-vision-preview";
+settings.ModelName = "gpt-4o";
 settings.ProxyUri = "http://127.0.0.1:1081";
 
 var client = new ChatGPTClient(settings);
@@ -24,12 +24,17 @@ var ChatImageModels = new List<ChatImageModel>()
 var systemPrompt = "";
 var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+
 msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 ```
 
 
 ## Update
+
+### 2.0.5 20241224
+* 移除过时的Vision模型判断
+* 增加禁用Token计算的设置
 
 ### 2.0.0 20231221
 * 支持Vision model的图片发送，并预先计算图片token（仅本地文件）

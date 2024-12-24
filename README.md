@@ -1,6 +1,6 @@
 # ChatGPTSharp
 
-This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. It supports models such as **gpt-4**, **gpt-4-vision-preview** and **gpt-3.5-turbo**.
+This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. 
 
 [中文](README_CN.md)
 
@@ -12,7 +12,7 @@ Use ConversationId for continuous conversations.
 ```csharp
 ChatGPTClientSettings settings = new ChatGPTClientSettings();
 settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "gpt-4-vision-preview";
+settings.ModelName = "gpt-4o";
 settings.ProxyUri = "http://127.0.0.1:1081";
 
 var client = new ChatGPTClient(settings);
@@ -26,12 +26,17 @@ var ChatImageModels = new List<ChatImageModel>()
 var systemPrompt = "";
 var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+
 msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
 Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 ```
 
 
 ## Update
+
+### 2.0.5 20241224
+* Removed obsolete Vision judgment
+* Added setting to disable token calculation
 
 ### 2.0.0 20231221
 * Added support for sending images using the Vision model and pre-computing image tokens (local files only).
