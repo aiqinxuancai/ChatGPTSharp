@@ -59,12 +59,10 @@ namespace ChatGPTSharp
                     MaxContextTokens = 4096;
                     MaxResponseTokens = 1024;
                     MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
+                    DisableCheckTokens = true;
                 }
 
-                _isVisionModel = value.Contains("-vision");
-
                 UpdateCompletionsUrl();
-
             }
             get
             {
@@ -81,11 +79,6 @@ namespace ChatGPTSharp
 
             CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
         }
-
-        private bool _isVisionModel;
-
-        public bool IsVisionModel { get => _isVisionModel; }
-
 
         /// <summary>
         /// OpenAI key
@@ -115,6 +108,11 @@ namespace ChatGPTSharp
         /// A value less than or equal to 0 will default to the maximum token amount.
         /// </summary>
         public int MaxPromptTokens { set; get; } = 3072;
+
+        /// <summary>
+        /// Enable this setting to no longer limit the token quantity.
+        /// </summary>
+        public bool DisableCheckTokens { set; get; } = false;
 
 
         /// <summary>

@@ -32,9 +32,8 @@ namespace ChatGPTSharp.Model
     public class ChatMessage
     {
         public string? Id { get; set; }
-        public string? ParentMessageId { get; set; }
 
-        public bool IsVisionModel { get; set; }
+        public string? ParentMessageId { get; set; }
 
         public RoleType Role { get; set; }
 
@@ -66,57 +65,51 @@ namespace ChatGPTSharp.Model
             get
             {
                 JToken messageBody = new JObject();
-                if (IsVisionModel)
+                var j = new JArray();
+
+                if (!string.IsNullOrEmpty(TextContent))
                 {
-                    var j = new JArray();
-                    if (!string.IsNullOrEmpty(TextContent))
-                    {
-                        j.Add(new JObject { { "type", "text" }, { "text", TextContent } });
-                    }
+                    j.Add(new JObject { { "type", "text" }, { "text", TextContent } });
+                }
 
-                    if (ImageContent != null && ImageContent.Count > 0)
+                if (ImageContent != null && ImageContent.Count > 0)
+                {
+                    foreach (ChatImageModel item in ImageContent)
                     {
-                        foreach (ChatImageModel item in ImageContent)
+                        JObject url = new JObject();
+                        url["url"] = item.Url;
+
+                        switch (item.Mode)
                         {
-                            JObject url = new JObject();
-                            url["url"] = item.Url;
+                            case ImageDetailMode.Auto:
+                                {
+                                    url["detail"] = "auto";
+                                    break;
+                                }
+                            case ImageDetailMode.Low:
+                                {
+                                    url["detail"] = "low";
+                                    break;
+                                }
+                            case ImageDetailMode.High:
+                                {
+                                    url["detail"] = "high";
+                                    break;
+                                }
 
-                            switch (item.Mode)
-                            {
-                                case ImageDetailMode.Auto:
-                                    {
-                                        url["detail"] = "auto";
-                                        break;
-                                    }
-                                case ImageDetailMode.Low:
-                                    {
-                                        url["detail"] = "low";
-                                        break;
-                                    }
-                                case ImageDetailMode.High:
-                                    {
-                                        url["detail"] = "high";
-                                        break;
-                                    }
+                        }
 
-                            }
-
-                            //url["tokensCount"] = item.TokensCount;
-                            JObject imageContent = new JObject
+                        //url["tokensCount"] = item.TokensCount;
+                        JObject imageContent = new JObject
                                 {
                                     { "type", "image_url" },
                                     { "image_url", url }
                                 };
-                            j.Add(imageContent);
-                        }
-
+                        j.Add(imageContent);
                     }
-                    messageBody = j;
+
                 }
-                else
-                {
-                    messageBody = new JValue(TextContent);  //JTokenType.String;
-                }
+                messageBody = j;
 
                 return new JObject() { { "role", Role == RoleType.User ? "user" : "assistant" }, { "content", messageBody } };
             }

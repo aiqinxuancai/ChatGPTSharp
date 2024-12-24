@@ -4,13 +4,13 @@
 		<TargetFrameworks>.net8;.net7;netstandard2.1;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<Description>Supports GPT-4V, GPT-3.5 models; auto-calculates request tokens; enables continuous dialogues with conversation IDs; now includes Vision model image sending.</Description>
+		<Description>Supports gpt-4o, o1 models; auto-calculates tokens; enables continuous dialogues with conversationId; now includes Vision model image sending.</Description>
 		<PackageProjectUrl>https://github.com/aiqinxuancai/ChatGPTSharp</PackageProjectUrl>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/aiqinxuancai/ChatGPTSharp</RepositoryUrl>
 		<PackageTags>chatgpt;openai</PackageTags>
 		<Title>ChatGPTSharp</Title>
-		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">2.0.4</VersionPrefix>
+		<VersionPrefix Condition=" '$(VersionPrefix)' == '' ">2.0.5</VersionPrefix>
 		<UserSecretsId>4c177d5f-4337-454e-895d-41b94b987a07</UserSecretsId>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	</PropertyGroup>
@@ -49,7 +49,7 @@
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="System.Drawing.Common" Version="8.0.0" />
-		<PackageReference Include="TiktokenSharp" Version="1.1.4" />
+		<PackageReference Include="TiktokenSharp" Version="1.1.6" />
 	</ItemGroup>
 
 </Project>

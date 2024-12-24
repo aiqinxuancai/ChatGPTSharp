@@ -24,6 +24,11 @@ namespace ChatGPTSharp
     {
         private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
 
+
+        public const string DefaultModel = "gpt-4o-mini";
+
+        public const uint DefaultTimeout = 60;
+
         public ChatGPTClientSettings Settings { get; private set; }
 
         private TikToken _tiktoken;
@@ -38,15 +43,15 @@ namespace ChatGPTSharp
         /// </summary>
         /// <param name="openaiToken"></param>
         /// <param name="modelName">text-davinci-003、gpt-3.5-turbo</param>
-        public ChatGPTClient(string openaiToken, string modelName = "gpt-3.5-turbo", string proxyUri = "", uint timeoutSeconds = 60)
+        public ChatGPTClient(string openaiToken, string modelName = DefaultModel, string proxyUri = "", uint timeoutSeconds = DefaultTimeout)
         {
             if (string.IsNullOrEmpty(modelName))
             {
-                throw new ChatGPTException("modelName is null.");
+                throw new ChatGPTException("ModelName is null.");
             }
             if (string.IsNullOrEmpty(openaiToken))
             {
-                throw new ChatGPTException("openaiToken is null.");
+                throw new ChatGPTException("OpenAIToken is null.");
             }
 
             ChatGPTClientSettings settings = new ChatGPTClientSettings()
@@ -133,7 +138,6 @@ namespace ChatGPTSharp
                 var userMessage = new ChatMessage
                 {
                     Id = Guid.NewGuid().ToString(),
-                    IsVisionModel = Settings.IsVisionModel,
                     ParentMessageId = parentMessageId,
                     Role = RoleType.User,
                     TextContent = message,
@@ -161,7 +165,6 @@ namespace ChatGPTSharp
                 var replyMessage = new ChatMessage
                 {
                     Id = Guid.NewGuid().ToString(),
-                    IsVisionModel = Settings.IsVisionModel,
                     ParentMessageId = userMessage.Id,
                     Role = RoleType.Assistant,
                     TextContent = reply,//Content = new JValue(reply),
@@ -226,7 +229,7 @@ namespace ChatGPTSharp
             //Currently, GPT-4 Turbo with vision does not support the message.name parameter,
             //functions/tools, response_format parameter,
             //and we currently set a low max_tokens default which you can override.
-            if (Settings.MaxResponseTokens > 0)
+            if (!Settings.DisableCheckTokens && Settings.MaxResponseTokens > 0)
             {
                 req["max_tokens"] = Settings.MaxResponseTokens;
             }
@@ -245,13 +248,14 @@ namespace ChatGPTSharp
 
             var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
             var response = await client.PostAsync(uri, content);
-
             var resultJsonString = await response.Content.ReadAsStringAsync();
+
             if (Settings.IsDebug)
             {
                 Console.WriteLine("rsp:" + resultJsonString);
             }
-            response.EnsureSuccessStatusCode();
+
+            response.EnsureSuccessStatusCodeWithContent(resultJsonString);
 
 
             JObject result = JObject.Parse(resultJsonString);
@@ -261,8 +265,22 @@ namespace ChatGPTSharp
         public (List<JObject> message, int tokensCount) BuildChatPayload(List<ChatMessage> messages, string parentMessageId, string systemPrompt = "")
         {
             var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
-
             var payload = new List<JObject>();
+
+            if (Settings.DisableCheckTokens)
+            {
+                if (!string.IsNullOrEmpty(systemPrompt))
+                {
+                    payload.Add(new JObject() { { "role", "system" }, { "content", systemPrompt } });
+                }
+
+                foreach (var message in orderedMessages)
+                {
+                    payload.Add(message.GetTokens(_tiktoken).body);
+                }
+
+                return (payload, 0);
+            }
 
             bool isFirstMessage = true;
 
@@ -340,11 +358,12 @@ namespace ChatGPTSharp
             }
             return orderedMessages;
         }
+   
 
 
-        
+
+
+
 
     }
-
-
 }
