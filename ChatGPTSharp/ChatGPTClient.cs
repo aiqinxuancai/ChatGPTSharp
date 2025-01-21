@@ -62,8 +62,14 @@ namespace ChatGPTSharp
                  TimeoutSeconds = timeoutSeconds
             };
 
-            
-            _tiktoken = TikToken.EncodingForModel(settings.ModelName);
+            try
+            {
+                _tiktoken = TikToken.EncodingForModel(settings.ModelName);
+            }
+            catch (Exception ex)
+            {
+                settings.DisableCheckTokens = true;
+            }
 
             Settings = settings;
         }
