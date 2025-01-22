@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>.net8;.net7;netstandard2.1;netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>.net9;.net8;.net7;netstandard2.1;netstandard2.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<Description>Supports gpt-4o, o1 models; auto-calculates tokens; enables continuous dialogues with conversationId; now includes Vision model image sending.</Description>
