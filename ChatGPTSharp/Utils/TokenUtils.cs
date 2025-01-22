@@ -47,8 +47,13 @@ namespace ChatGPTSharp.Utils
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public static int GetTokensForSingleMessage(TikToken tikToken, JObject message)
+        public static int GetTokensForSingleMessage(TikToken? tikToken, JObject message)
         {
+            if (tikToken == null)
+            {
+                return 0;
+            }
+
             int tokens = 4;   // every message follows <im_start>{role/name}\n{content}<im_end>\n
             foreach (var property in message)
             {

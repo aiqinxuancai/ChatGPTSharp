@@ -31,7 +31,7 @@ namespace ChatGPTSharp
 
         public ChatGPTClientSettings Settings { get; private set; }
 
-        private TikToken _tiktoken;
+        private TikToken? _tiktoken;
 
         public bool IsDebug {
             get { return Settings.IsDebug; }
@@ -68,6 +68,7 @@ namespace ChatGPTSharp
             }
             catch (Exception ex)
             {
+                _tiktoken = null;
                 settings.DisableCheckTokens = true;
             }
 
