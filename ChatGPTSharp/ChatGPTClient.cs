@@ -89,7 +89,17 @@ namespace ChatGPTSharp
 
 
             Settings = settings;
-            _tiktoken = TikToken.EncodingForModel(settings.ModelName);
+
+
+            try
+            {
+                _tiktoken = TikToken.EncodingForModel(settings.ModelName);
+            }
+            catch (Exception ex)
+            {
+                _tiktoken = null;
+                settings.DisableCheckTokens = true;
+            }
         }
 
 

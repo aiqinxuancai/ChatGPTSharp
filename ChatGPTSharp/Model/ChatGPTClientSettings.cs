@@ -1,6 +1,7 @@
 ﻿using ChatGPTSharp.Utils;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -75,7 +76,9 @@ namespace ChatGPTSharp
         {
             UriBuilder uriBuilder = new UriBuilder(APIURL);
 
-            uriBuilder.Path = "/v1/chat/completions";
+            
+
+            uriBuilder.Path = uriBuilder.Path + (uriBuilder.Path.EndsWith("/") ? "" : "/") +  "v1/chat/completions";
 
             CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
         }

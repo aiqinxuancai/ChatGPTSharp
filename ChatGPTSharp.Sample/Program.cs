@@ -8,10 +8,15 @@ Console.WriteLine("Hello, World!");
 
 ChatGPTClientSettings settings = new ChatGPTClientSettings();
 settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "gpt-4o";
-settings.ProxyUri = "http://127.0.0.1:1081";
+settings.ModelName = "anthropic/claude-3.5-sonnet";
+settings.APIURL = "https://openrouter.ai/api";
+
+
+
 
 var client = new ChatGPTClient(settings);
+
+
 client.IsDebug = true;
 
 var ChatImageModels = new List<ChatImageModel>()

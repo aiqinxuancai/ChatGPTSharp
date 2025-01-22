@@ -42,7 +42,7 @@ namespace ChatGPTSharp.Model
         public List<ChatImageModel> ImageContent { get; set; } = new List<ChatImageModel> { };
 
 
-        public (JObject body, int tokens) GetTokens (TikToken tikToken)
+        public (JObject body, int tokens) GetTokens (TikToken? tikToken)
         {
             var body = MessageBody;
             var textTokens = TokenUtils.GetTokensForSingleMessage(tikToken, body);
