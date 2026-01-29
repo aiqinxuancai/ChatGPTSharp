@@ -1,76 +1,296 @@
-# ChatGPTSharp
+﻿# ChatGPTSharp
 
-本项目实现了基于ConversationId的ChatGPT连续对话，只需几行代码就可快速集成，支持OpenAI所有模型。
+面向现代 C# 的 Chat 客户端，支持工具调用、流式输出、图像/音频输入，并保留 ConversationId 连续对话能力。支持扩展请求体（ExtraBody），不再进行本地 token 计算或限制。
 
-## 开始使用
+## 功能特性
 
-[NuGet package](https://www.nuget.org/packages/ChatGPTSharp/)
+- ConversationId 连续对话
+- 图像与音频统一用内容数组传递
+- Tool 定义 + 工具调用返回
+- `IAsyncEnumerable` 流式输出
+- `ExtraBody` 自由扩展请求字段
+- 不做本地 token 计算与限制
 
-使用会话ID进行连续对话
-```csharp
-ChatGPTClientSettings settings = new ChatGPTClientSettings();
-settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "gpt-4o";
-settings.ProxyUri = "http://127.0.0.1:1081";
+## 安装
 
-var client = new ChatGPTClient(settings);
-client.IsDebug = true;
-
-var ChatImageModels = new List<ChatImageModel>()
-{
-    ChatImageModel.CreateWithFile(@"C:\Users\aiqin\Pictures\20231221155547.png", ImageDetailMode.Low)
-};
-
-var systemPrompt = "";
-var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-
-msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+```bash
+ dotnet add package ChatGPTSharp
 ```
 
+## 快速开始（无状态对话）
 
-## Update
+```csharp
+using ChatGPTSharp;
+using ChatGPTSharp.Model;
 
-### 2.0.5 20241224
-* 移除过时的Vision模型判断
-* 增加禁用Token计算的设置
+var settings = new ChatGPTClientSettings
+{
+    OpenAIKey = File.ReadAllText("KEY.txt"),
+    ModelName = "gpt-4o-mini"
+};
 
-### 2.0.0 20231221
-* 支持Vision model的图片发送，并预先计算图片token（仅本地文件）
-* 改进消息的token算法，使其与官方接口一致
-* 增加更多官网模型的默认token数量数据，以及自动转换模型名称中的16k字样为最大token
-* 鉴于模型的token数量越来越大，支持不限制的MaxResponseTokens、MaxPromptTokens的方法，将其设置为0既可
+var client = new ChatGPTClient(settings);
 
-### 1.1.4 20230711
-* 支持gpt-3.5-turbo-16k
+var result = await client.SendMessage(new List<MessageContent>
+{
+    MessageContent.FromText("你好！")
+});
 
-### 1.1.3 20230508
-* 移除旧的token算法代码，支持netstandard2.0，现在.NET Framework也可以使用此库
+Console.WriteLine(result.Response);
+```
 
-### 1.1.2 20230429
-* 支持gpt-4模型，修正8k及32k的最大token数量
+## 连续对话
 
-### 1.1.0 20230320
-* ChatGPTClient的初始化方法增加请求的超时设定，并将默认的超时时间从20秒改为60秒
+使用 `SendMessageWithConversation` 记录历史并返回 `ConversationId` + `MessageId`。
 
-### 1.0.9 20230307
-* 使用 tiktokensharp 来计算token数量，修正token计算不准确的问题
+```csharp
+var first = await client.SendMessageWithConversation(new List<MessageContent>
+{
+    MessageContent.FromText("你好！")
+});
 
-<details> <summary>更久的版本更新</summary>
-    
-### 1.0.8 20230306
-* token算法修复
+var second = await client.SendMessageWithConversation(
+    new List<MessageContent> { MessageContent.FromText("继续聊下去") },
+    conversationId: first.ConversationId ?? "",
+    parentMessageId: first.MessageId ?? "");
 
-### 1.0.6 20230303
-* 暂时移除了token计算，在某些字符串组合时，可能会出现异常，后续测试完毕后再恢复。
+Console.WriteLine(second.Response);
+```
 
-### 1.0.5 20230303
-* 增加SendMessage的参数sendSystemType和sendSystemMessage，用于指定在对话中插入system消息。
+## System Prompt
 
-### 1.0.4 20230302
-* 增加gpt3的本地token算法，算法来自js库gpt-3-encoder
-    
-</details>
+```csharp
+var result = await client.SendMessage(
+    new List<MessageContent> { MessageContent.FromText("用一句话总结这段文字。") },
+    systemPrompt: "你是一个非常简洁的助手。"
+);
+```
 
-This code base references [node-chatgpt-api](https://github.com/waylaidwanderer/node-chatgpt-api)
+## 图像输入
+
+```csharp
+var contents = new List<MessageContent>
+{
+    MessageContent.FromText("描述这些图片"),
+    MessageContent.FromImageFile(@"C:\Images\demo.jpg", ImageDetailMode.Low),
+    MessageContent.FromImageUrl("https://example.com/demo.png", ImageDetailMode.Auto)
+};
+
+var result = await client.SendMessage(contents);
+```
+
+## 音频输入
+
+```csharp
+var contents = new List<MessageContent>
+{
+    MessageContent.FromText("请转写这段音频"),
+    MessageContent.FromAudioUrl("https://example.com/sample.mp3"),
+    MessageContent.FromAudioFile(@"C:\Audio\sample.mp3", "audio/mpeg")
+};
+
+var result = await client.SendMessage(contents);
+```
+
+## 流式输出
+
+```csharp
+await foreach (var evt in client.SendMessageStream(new List<MessageContent>
+{
+    MessageContent.FromText("讲一个故事")
+}))
+{
+    if (evt.IsDone)
+    {
+        Console.WriteLine("\n[done]");
+        break;
+    }
+
+    if (!string.IsNullOrEmpty(evt.DeltaText))
+    {
+        Console.Write(evt.DeltaText);
+    }
+}
+```
+
+## 工具调用（Tool / Function Calling）
+
+定义工具 schema，收到 tool_call 后执行，再把结果发回模型。
+
+```csharp
+using System.Text.Json.Nodes;
+
+var weatherSchema = JsonNode.Parse(@"{
+  \"type\": \"object\",
+  \"properties\": {
+    \"city\": { \"type\": \"string\" }
+  },
+  \"required\": [\"city\"]
+}") as JsonObject;
+
+var tools = new List<ToolDefinition>
+{
+    ToolDefinition.CreateFunction(new ToolFunctionDefinition(
+        "get_weather",
+        "获取当前天气",
+        weatherSchema))
+};
+
+var toolResult = await client.SendMessage(
+    new List<MessageContent> { MessageContent.FromText("巴黎天气怎么样？") },
+    tools: tools);
+
+if (toolResult.ToolCalls?.Count > 0)
+{
+    var call = toolResult.ToolCalls[0];
+    var args = JsonNode.Parse(call.Function.Arguments) as JsonObject;
+    var city = args?["city"]?.GetValue<string>();
+
+    // 实际工具执行逻辑
+    var weather = new JsonObject
+    {
+        ["city"] = city,
+        ["tempC"] = 18
+    };
+
+    // 手动构造消息继续对话
+    var messages = new List<ChatMessage>
+    {
+        new ChatMessage
+        {
+            Role = RoleType.User,
+            Contents = new List<MessageContent> { MessageContent.FromText("巴黎天气怎么样？") }
+        },
+        new ChatMessage { Role = RoleType.Assistant, ToolCalls = toolResult.ToolCalls },
+        new ChatMessage
+        {
+            Role = RoleType.Tool,
+            ToolCallId = call.Id,
+            Contents = new List<MessageContent> { MessageContent.FromText(weather.ToString()) }
+        }
+    };
+
+    var followup = await client.SendAsync(new ChatRequest
+    {
+        Messages = messages,
+        Tools = tools
+    });
+
+    Console.WriteLine(followup.Message?.GetTextContent());
+}
+```
+
+## Responses API（服务端会话状态 + 内置工具）
+
+Responses API 支持通过 `conversation` 或 `previous_response_id` 使用服务端会话状态，并支持内置工具。
+
+```csharp
+using System.Text.Json.Nodes;
+
+var response = await client.CreateResponseAsync(new ResponseRequest
+{
+    Instructions = "你很简洁。",
+    Input = MessageContent.BuildResponseInput(RoleType.User, new List<MessageContent>
+    {
+        MessageContent.FromText("用一句话总结这段内容。")
+    }),
+    Store = true,
+    Tools = new List<ResponseTool>
+    {
+        ResponseTool.BuiltIn("web_search")
+    }
+});
+
+Console.WriteLine(response.GetOutputText());
+```
+
+创建服务端会话并持续追加消息：
+
+```csharp
+var convo = await client.CreateConversationAsync();
+
+var items = MessageContent.BuildResponseInput(RoleType.User, new List<MessageContent>
+{
+    MessageContent.FromText("记住偏好：我喜欢简短回答。")
+});
+
+await client.AddConversationItemsAsync(convo.Id ?? "", items);
+
+var followup = await client.CreateResponseAsync(new ResponseRequest
+{
+    ConversationId = convo.Id,
+    Input = MessageContent.BuildResponseInput(RoleType.User, new List<MessageContent>
+    {
+        MessageContent.FromText("你应该记住什么？")
+    })
+});
+
+Console.WriteLine(followup.GetOutputText());
+```
+
+## ExtraBody（扩展请求体）
+
+```csharp
+var extra = new Dictionary<string, object?>
+{
+    ["response_format"] = new { type = "json_object" }
+};
+
+var result = await client.SendMessage(
+    new List<MessageContent> { MessageContent.FromText("返回 JSON，包含字段 a 和 b") },
+    extraBody: extra);
+```
+
+也可以设置全局默认：
+
+```csharp
+settings.ExtraBody = new Dictionary<string, object?>
+{
+    ["response_format"] = new { type = "json_object" }
+};
+```
+
+## 高级用法：手动请求
+
+通过 `SendAsync` / `StreamAsync` 自己维护消息列表。
+
+```csharp
+var request = new ChatRequest
+{
+    Model = "gpt-4o-mini",
+    Messages = new List<ChatMessage>
+    {
+        new ChatMessage
+        {
+            Role = RoleType.System,
+            Contents = new List<MessageContent> { MessageContent.FromText("你很简洁。") }
+        },
+        new ChatMessage
+        {
+            Role = RoleType.User,
+            Contents = new List<MessageContent> { MessageContent.FromText("解释一下异步流。") }
+        }
+    }
+};
+
+var response = await client.SendAsync(request);
+Console.WriteLine(response.Message?.GetTextContent());
+```
+
+## 配置
+
+```csharp
+var settings = new ChatGPTClientSettings
+{
+    OpenAIKey = File.ReadAllText("KEY.txt"),
+    ModelName = "gpt-4o-mini",
+    BaseUrl = "https://api.openai.com/",
+    ProxyUri = "http://127.0.0.1:1080",
+    TimeoutSeconds = 60
+};
+```
+
+说明：
+- `BaseUrl` 与 `ProxyUri` 可用于路由或代理。`BaseUrl` 即使包含 `/v1` 也能正确拼接。
+
+This code base references node-chatgpt-api.

@@ -2,14 +2,13 @@
 using ChatGPTSharp;
 using ChatGPTSharp.Model;
 using ChatGPTSharp.Sample;
-using TiktokenSharp;
 
 Console.WriteLine("Hello, World!");
 
 ChatGPTClientSettings settings = new ChatGPTClientSettings();
-settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "anthropic/claude-3.5-sonnet";
-settings.APIURL = "https://openrouter.ai/api";
+settings.OpenAIKey = File.ReadAllText("am.txt");
+settings.ModelName = "aihub-Phi-4-multimodal-instruct";
+settings.BaseUrl = "https://aihubmix.com/";
 
 
 
@@ -19,17 +18,24 @@ var client = new ChatGPTClient(settings);
 
 client.IsDebug = true;
 
-var ChatImageModels = new List<ChatImageModel>()
+var contents = new List<MessageContent>
 {
-    ChatImageModel.CreateWithFile(@"C:\Users\aiqin\Pictures\20231221155547.png", ImageDetailMode.Low)
+    MessageContent.FromText("请将音频转换为文本。"),
+    MessageContent.FromAudioUrl("https://wolfapps.oss-cn-shanghai.aliyuncs.com/17667_0_1747799830348.mp3")
 };
 
 var systemPrompt = "";
-var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
 
-msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+var msg = await client.SendMessageWithConversation(contents, systemPrompt: systemPrompt);
+Console.WriteLine($"[AI Response]: {msg.Response} (ConversationId: {msg.ConversationId}, MessageId: {msg.MessageId})");
+
+var followUp = await client.SendMessageWithConversation(
+    new List<MessageContent> { MessageContent.FromText("继续总结上面的内容。") },
+    conversationId: msg.ConversationId ?? "",
+    parentMessageId: msg.MessageId ?? "",
+    systemPrompt: systemPrompt);
+
+Console.WriteLine($"[AI Response (Conversation)]: {followUp.Response} (ConversationId: {followUp.ConversationId}, MessageId: {followUp.MessageId})");
 
 
 

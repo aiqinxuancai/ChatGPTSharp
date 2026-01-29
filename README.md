@@ -1,78 +1,295 @@
-# ChatGPTSharp
+﻿# ChatGPTSharp
 
-This project implements ChatGPT continuous dialogue based on ConversationId, which can be quickly integrated with just a few lines of code. 
+Modern C# client for chat, tools, streaming, and multimodal messages (image/audio). It supports ConversationId-based continuity, flexible request extensions, and manual control when you need it.
 
-[中文](README_CN.md)
+## Features
 
-## Getting Started
+- ConversationId-based continuity
+- Image and audio inputs via a unified content array
+- Tool definitions + tool-call responses
+- Streaming responses via `IAsyncEnumerable`
+- Extra request fields via `ExtraBody`
+- No local token counting or token limits
 
-ChatGPTSharp is available as [NuGet package](https://www.nuget.org/packages/ChatGPTSharp/).
+## Installation
 
-Use ConversationId for continuous conversations.
-```csharp
-ChatGPTClientSettings settings = new ChatGPTClientSettings();
-settings.OpenAIToken = File.ReadAllText("KEY.txt");
-settings.ModelName = "gpt-4o";
-settings.ProxyUri = "http://127.0.0.1:1081";
-
-var client = new ChatGPTClient(settings);
-client.IsDebug = true;
-
-var ChatImageModels = new List<ChatImageModel>()
-{
-    ChatImageModel.CreateWithFile(@"C:\Users\aiqin\Pictures\20231221155547.png", ImageDetailMode.Low)
-};
-
-var systemPrompt = "";
-var msg = await client.SendMessage("Please describe this image", systemPrompt: systemPrompt, images: ChatImageModels);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
-
-msg = await client.SendMessage("Have you eaten today?", msg.ConversationId, msg.MessageId);
-Console.WriteLine($"{msg.Response}  {msg.ConversationId}, {msg.MessageId}");
+```bash
+ dotnet add package ChatGPTSharp
 ```
 
+## Quick Start (Stateless Chat)
 
-## Update
+```csharp
+using ChatGPTSharp;
+using ChatGPTSharp.Model;
 
-### 2.0.5 20241224
-* Removed obsolete Vision judgment
-* Added setting to disable token calculation
+var settings = new ChatGPTClientSettings
+{
+    OpenAIKey = File.ReadAllText("KEY.txt"),
+    ModelName = "gpt-4o-mini"
+};
 
-### 2.0.0 20231221
-* Added support for sending images using the Vision model and pre-computing image tokens (local files only).
-* Improved the token algorithm for messages to align with the official API.
-* Added more default token count data for official website models and automatic conversion of '16k' in model names to maximum tokens.
-* Considering the increasing number of tokens in models, introduced a method to support unlimited MaxResponseTokens and MaxPromptTokens. Setting them to 0 will remove the limit.
+var client = new ChatGPTClient(settings);
 
-### 1.1.4 20230711
-* Add support gpt-3.5-turbo-16k
- 
-### 1.1.3 20230508
-* Removed the old token algorithm code and now supports netstandard2.0, now, the library can also be used with .NET Framework.
+var result = await client.SendMessage(new List<MessageContent>
+{
+    MessageContent.FromText("Hello!")
+});
 
-### 1.1.2 20230429
-* Support for the GPT-4 model and correction of the maximum token count for 8k and 32k.
+Console.WriteLine(result.Response);
+```
 
-<details> <summary>Changelog for earlier versions.</summary>
+## Continuous Conversation
 
-### 1.1.0 20230320
-* The initialization method of ChatGPTClient adds a request timeout setting and changes the default timeout time from 20 seconds to 60 seconds.
+Use `SendMessageWithConversation` to record history and return `ConversationId` + `MessageId`.
 
-### 1.0.9 20230307
-* Using TiktokenSharp to calculate token count, fixing the issue of inaccurate token calculation.
+```csharp
+var first = await client.SendMessageWithConversation(new List<MessageContent>
+{
+    MessageContent.FromText("Hello!")
+});
 
-### 1.0.8 20230304
-* token algorithm fix
+var second = await client.SendMessageWithConversation(
+    new List<MessageContent> { MessageContent.FromText("Continue the conversation") },
+    conversationId: first.ConversationId ?? "",
+    parentMessageId: first.MessageId ?? "");
 
-### 1.0.6 20230303
-* The token algorithm has been temporarily removed, which may cause exceptions when certain strings are combined. It will be restored after subsequent testing is completed.
+Console.WriteLine(second.Response);
+```
 
-### 1.0.5 20230303
-* Add SendMessage parameters sendSystemType and sendSystemMessage to specify the insertion of system messages into the conversation.
+## System Prompt
 
-### 1.0.3 20230302
-* Add local token algorithm of gpt3, the algorithm is from js library gpt-3-encoder
+```csharp
+var result = await client.SendMessage(
+    new List<MessageContent> { MessageContent.FromText("Summarize this in one sentence.") },
+    systemPrompt: "You are a concise assistant.");
+```
 
-</details>
+## Image Input
 
-This code base references [node-chatgpt-api](https://github.com/waylaidwanderer/node-chatgpt-api)
+```csharp
+var contents = new List<MessageContent>
+{
+    MessageContent.FromText("Describe these images"),
+    MessageContent.FromImageFile(@"C:\Images\demo.jpg", ImageDetailMode.Low),
+    MessageContent.FromImageUrl("https://example.com/demo.png", ImageDetailMode.Auto)
+};
+
+var result = await client.SendMessage(contents);
+```
+
+## Audio Input
+
+```csharp
+var contents = new List<MessageContent>
+{
+    MessageContent.FromText("Transcribe this audio"),
+    MessageContent.FromAudioUrl("https://example.com/sample.mp3"),
+    MessageContent.FromAudioFile(@"C:\Audio\sample.mp3", "audio/mpeg")
+};
+
+var result = await client.SendMessage(contents);
+```
+
+## Streaming
+
+```csharp
+await foreach (var evt in client.SendMessageStream(new List<MessageContent>
+{
+    MessageContent.FromText("Tell me a story")
+}))
+{
+    if (evt.IsDone)
+    {
+        Console.WriteLine("\n[done]");
+        break;
+    }
+
+    if (!string.IsNullOrEmpty(evt.DeltaText))
+    {
+        Console.Write(evt.DeltaText);
+    }
+}
+```
+
+## Tools (Function Calling)
+
+Define a tool schema, send a request, then execute the tool and return its result.
+
+```csharp
+using System.Text.Json.Nodes;
+
+var weatherSchema = JsonNode.Parse(@"{
+  \"type\": \"object\",
+  \"properties\": {
+    \"city\": { \"type\": \"string\" }
+  },
+  \"required\": [\"city\"]
+}") as JsonObject;
+
+var tools = new List<ToolDefinition>
+{
+    ToolDefinition.CreateFunction(new ToolFunctionDefinition(
+        "get_weather",
+        "Get current weather",
+        weatherSchema))
+};
+
+var toolResult = await client.SendMessage(
+    new List<MessageContent> { MessageContent.FromText("What's the weather in Paris?") },
+    tools: tools);
+
+if (toolResult.ToolCalls?.Count > 0)
+{
+    var call = toolResult.ToolCalls[0];
+    var args = JsonNode.Parse(call.Function.Arguments) as JsonObject;
+    var city = args?["city"]?.GetValue<string>();
+
+    // Your tool execution
+    var weather = new JsonObject
+    {
+        ["city"] = city,
+        ["tempC"] = 18
+    };
+
+    // Continue with manual message list
+    var messages = new List<ChatMessage>
+    {
+        new ChatMessage
+        {
+            Role = RoleType.User,
+            Contents = new List<MessageContent> { MessageContent.FromText("What's the weather in Paris?") }
+        },
+        new ChatMessage { Role = RoleType.Assistant, ToolCalls = toolResult.ToolCalls },
+        new ChatMessage
+        {
+            Role = RoleType.Tool,
+            ToolCallId = call.Id,
+            Contents = new List<MessageContent> { MessageContent.FromText(weather.ToString()) }
+        }
+    };
+
+    var followup = await client.SendAsync(new ChatRequest
+    {
+        Messages = messages,
+        Tools = tools
+    });
+
+    Console.WriteLine(followup.Message?.GetTextContent());
+}
+```
+
+## Responses API (Server-Side State + Built-in Tools)
+
+The Responses API supports server-side state via `conversation` or `previous_response_id`, and built-in tools.
+
+```csharp
+using System.Text.Json.Nodes;
+
+var response = await client.CreateResponseAsync(new ResponseRequest
+{
+    Instructions = "You are concise.",
+    Input = MessageContent.BuildResponseInput(RoleType.User, new List<MessageContent>
+    {
+        MessageContent.FromText("Summarize this in one sentence.")
+    }),
+    Store = true,
+    Tools = new List<ResponseTool>
+    {
+        ResponseTool.BuiltIn("web_search")
+    }
+});
+
+Console.WriteLine(response.GetOutputText());
+```
+
+Create a conversation on the server and keep adding items:
+
+```csharp
+var convo = await client.CreateConversationAsync();
+
+var items = MessageContent.BuildResponseInput(RoleType.User, new List<MessageContent>
+{
+    MessageContent.FromText("Remember this preference: I like short answers.")
+});
+
+await client.AddConversationItemsAsync(convo.Id ?? "", items);
+
+var followup = await client.CreateResponseAsync(new ResponseRequest
+{
+    ConversationId = convo.Id,
+    Input = MessageContent.BuildResponseInput(RoleType.User, new List<MessageContent>
+    {
+        MessageContent.FromText("What should you remember?")
+    })
+});
+
+Console.WriteLine(followup.GetOutputText());
+```
+
+## ExtraBody (Request Extensions)
+
+```csharp
+var extra = new Dictionary<string, object?>
+{
+    ["response_format"] = new { type = "json_object" }
+};
+
+var result = await client.SendMessage(
+    new List<MessageContent> { MessageContent.FromText("Return JSON with fields a and b") },
+    extraBody: extra);
+```
+
+You can also set defaults:
+
+```csharp
+settings.ExtraBody = new Dictionary<string, object?>
+{
+    ["response_format"] = new { type = "json_object" }
+};
+```
+
+## Advanced: Manual Requests
+
+Use `SendAsync` and `StreamAsync` with a `ChatRequest` when you want full control over messages.
+
+```csharp
+var request = new ChatRequest
+{
+    Model = "gpt-4o-mini",
+    Messages = new List<ChatMessage>
+    {
+        new ChatMessage
+        {
+            Role = RoleType.System,
+            Contents = new List<MessageContent> { MessageContent.FromText("You are concise.") }
+        },
+        new ChatMessage
+        {
+            Role = RoleType.User,
+            Contents = new List<MessageContent> { MessageContent.FromText("Explain async streams.") }
+        }
+    }
+};
+
+var response = await client.SendAsync(request);
+Console.WriteLine(response.Message?.GetTextContent());
+```
+
+## Configuration
+
+```csharp
+var settings = new ChatGPTClientSettings
+{
+    OpenAIKey = File.ReadAllText("KEY.txt"),
+    ModelName = "gpt-4o-mini",
+    BaseUrl = "https://api.openai.com/",
+    ProxyUri = "http://127.0.0.1:1080",
+    TimeoutSeconds = 60
+};
+```
+
+Notes:
+- `BaseUrl` and `ProxyUri` can be used to route requests. `BaseUrl` may include `/v1` and will still resolve correctly.
+
+This code base references node-chatgpt-api.

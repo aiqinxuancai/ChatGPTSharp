@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace GetOnlineModelTokens
 {
@@ -28,19 +28,29 @@ namespace GetOnlineModelTokens
 
                 var jsonString = await response.Content.ReadAsStringAsync();
 
-                var jsonObject = JObject.Parse(jsonString);
-                var models = jsonObject["data"]["models"];
+                var jsonObject = JsonNode.Parse(jsonString) as JsonObject;
+                var models = jsonObject?["data"]?["models"] as JsonArray;
 
-                foreach (var model in models)
+                if (models != null)
                 {
-                    string slug = model["slug"].ToString();
-                    string modelName = slug.Replace("openai/", "");
+                    foreach (var model in models.OfType<JsonObject>())
+                    {
+                        var slug = model["slug"]?.GetValue<string>();
+                        if (string.IsNullOrEmpty(slug))
+                        {
+                            continue;
+                        }
 
-                    int contextLength = model["context_length"].Value<int>();
-                    _modelContextLengths[modelName] = contextLength;
+                        var modelName = slug.Replace("openai/", "");
+                        var contextLength = model["context_length"]?.GetValue<int>() ?? 0;
+                        if (contextLength > 0)
+                        {
+                            _modelContextLengths[modelName] = contextLength;
+                        }
+                    }
                 }
 
-                Console.WriteLine(JsonConvert.SerializeObject(_modelContextLengths));
+                Console.WriteLine(JsonSerializer.Serialize(_modelContextLengths));
 
             }
             catch (Exception ex)

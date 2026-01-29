@@ -1,10 +1,5 @@
-﻿using ChatGPTSharp.Utils;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ChatGPTSharp
 {
@@ -13,57 +8,19 @@ namespace ChatGPTSharp
     /// </summary>
     public class ChatGPTClientSettings
     {
-        private string _modelName = "gpt-3.5-turbo";
+        private string _modelName = "gpt-4o-mini";
 
-        /// <summary>
-        /// The name of the model. Setting this property automatically adjusts MaxContextTokens, MaxResponseTokens, and MaxPromptTokens based on the model's token capacity. 
-        /// It uses a regular expression to match token quantity in the model name, 
-        /// falls back to a predefined token limit map from OpenAI, and sets default values if no specific token number is found.
-        /// </summary>
+        public ChatGPTClientSettings()
+        {
+            UpdateApiUrls();
+        }
+
         public string ModelName
         {
             set
             {
                 _modelName = value;
-
-                // Use a regular expression to match the token count marker in the model name
-                Regex regex = new Regex("-(\\d+)k\\W");
-                var match = regex.Match(_modelName);
-                bool findTokenNumber = false;
-
-                if (match.Success)
-                {
-                    var tokens = match.Groups[1].Value;
-                    if (int.TryParse(tokens, out int toukensNumber))
-                    {
-                        MaxContextTokens = toukensNumber * 1024;
-                        MaxResponseTokens = 1024;
-                        MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                        findTokenNumber = true;
-                    }
-                }
-
-                // Fetch the maximum token table corresponding to models from the OpenAI official website
-                // https://platform.openai.com/docs/models
-                var dict = TokenUtils.GetTokenLimitWithOpenAI();
-
-                if (findTokenNumber == false && dict.ContainsKey(value))
-                {
-                    MaxContextTokens = dict[value];
-                    MaxResponseTokens = 1024;
-                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                    findTokenNumber = true;
-                }
-
-                if (!findTokenNumber)
-                {
-                    MaxContextTokens = 4096;
-                    MaxResponseTokens = 1024;
-                    MaxPromptTokens = MaxContextTokens - MaxResponseTokens;
-                    DisableCheckTokens = true;
-                }
-
-                UpdateCompletionsUrl();
+                UpdateApiUrls();
             }
             get
             {
@@ -71,60 +28,27 @@ namespace ChatGPTSharp
             }
         }
 
-
         private void UpdateCompletionsUrl()
         {
-            UriBuilder uriBuilder = new UriBuilder(APIURL);
-
-            
-
-            uriBuilder.Path = uriBuilder.Path + (uriBuilder.Path.EndsWith("/") ? "" : "/") +  "v1/chat/completions";
-
-            CompletionsUrl = uriBuilder.Uri.AbsoluteUri;
+            UpdateApiUrls();
         }
 
         /// <summary>
         /// OpenAI key
         /// </summary>
-        public string OpenAIToken { set; get; } = string.Empty;
-
-        /// <summary>
-        /// The maximum total number of tokens. This configuration is automatically updated after setting ModelName. 
-        /// To customize it, modify it post-ModelName configuration.
-        /// </summary>
-        public int MaxContextTokens { set; get; } = 4096;
-
-        /// <summary>
-        /// The maximum number of tokens that the API returns. Typically set to 1024. 
-        /// Consider modifying this value to include more prompts if needed. 
-        /// This configuration is automatically updated after setting ModelName. 
-        /// To customize it, modify it post-ModelName configuration.
-        /// A value less than or equal to 0 indicates no limit.
-        /// </summary>
-        public int MaxResponseTokens { set; get; } = 1024;
-
-        /// <summary>
-        /// The maximum number of Prompt tokens. Typically set as MaxContextTokens minus MaxResponseTokens. 
-        /// To maximize prompt inclusion, consider increasing this value while reducing MaxResponseTokens. 
-        /// This configuration is automatically updated after setting ModelName. 
-        /// To customize it, modify it post-ModelName configuration.
-        /// A value less than or equal to 0 will default to the maximum token amount.
-        /// </summary>
-        public int MaxPromptTokens { set; get; } = 3072;
-
-        /// <summary>
-        /// Enable this setting to no longer limit the token quantity.
-        /// </summary>
-        public bool DisableCheckTokens { set; get; } = false;
-
+        public string OpenAIKey { set; get; } = string.Empty;
 
         /// <summary>
         /// Whether to output debug information in the console
         /// </summary>
         public bool IsDebug { set; get; }
 
+        /// <summary>
+        /// Extra request fields merged into the request body.
+        /// </summary>
+        public IDictionary<string, object?>? ExtraBody { get; set; }
 
-        private string _APIURL = "https://api.openai.com/";
+        private string _baseUrl = "https://api.openai.com/";
 
         /// <summary>
         /// Sets a custom base URI for accessing the API, useful for scenarios requiring a reverse proxy for network configurations or specific deployment requirements. 
@@ -132,21 +56,22 @@ namespace ChatGPTSharp
         /// This property can be used alongside ProxyUri, but it is generally recommended to use only one to avoid potential routing conflicts or redundancy. 
         /// Adjusting this property also updates the internal API completion URLs.
         /// </summary>
-        public string APIURL
+        public string BaseUrl
         {
             set
             {
-                _APIURL = value;
-                UpdateCompletionsUrl();
+                _baseUrl = value;
+                UpdateApiUrls();
             }
             get
             {
-                return _APIURL;
+                return _baseUrl;
             }
         }
 
         public string CompletionsUrl { get; private set; } = string.Empty;
-
+        public string ResponsesUrl { get; private set; } = string.Empty;
+        public string ConversationsUrl { get; private set; } = string.Empty;
 
         /// <summary>
         /// Specifies a proxy address for accessing OpenAI's API. 
@@ -159,7 +84,6 @@ namespace ChatGPTSharp
         /// Timeout seconds.
         /// </summary>
         public uint TimeoutSeconds { set; get; } = 60;
-
 
         /// <summary>
         /// Defaults to 1
@@ -187,5 +111,38 @@ namespace ChatGPTSharp
         /// </summary>
         public double FrequencyPenalty { set; get; } = 0;
 
+        private void UpdateApiUrls()
+        {
+            var root = NormalizeBaseUrl(BaseUrl);
+            CompletionsUrl = $"{root}/v1/chat/completions";
+            ResponsesUrl = $"{root}/v1/responses";
+            ConversationsUrl = $"{root}/v1/conversations";
+        }
+
+        private static string NormalizeBaseUrl(string baseUrl)
+        {
+            UriBuilder uriBuilder = new UriBuilder(baseUrl);
+            var path = (uriBuilder.Path ?? string.Empty).TrimEnd('/');
+
+            if (path.EndsWith("/v1/chat/completions", StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(0, path.Length - "/v1/chat/completions".Length);
+            }
+            else if (path.EndsWith("/v1/responses", StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(0, path.Length - "/v1/responses".Length);
+            }
+            else if (path.EndsWith("/v1/conversations", StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(0, path.Length - "/v1/conversations".Length);
+            }
+            else if (path.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(0, path.Length - "/v1".Length);
+            }
+
+            uriBuilder.Path = path;
+            return uriBuilder.Uri.AbsoluteUri.TrimEnd('/');
+        }
     }
 }

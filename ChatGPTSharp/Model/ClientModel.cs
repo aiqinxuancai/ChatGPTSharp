@@ -1,26 +1,16 @@
-﻿using ChatGPTSharp.Utils;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Runtime;
-using System.Text;
-using TiktokenSharp;
+using System.Linq;
+using System.Text.Json.Nodes;
 
 namespace ChatGPTSharp.Model
 {
-    public enum ContentType
-    {
-        None,
-        Text,
-        ImageUrl,
-    }
-
     public enum RoleType
     {
         User,
         Assistant,
         System,
+        Tool,
     }
 
     public class Conversation
@@ -37,87 +27,115 @@ namespace ChatGPTSharp.Model
 
         public RoleType Role { get; set; }
 
-        public string? TextContent { get; set; }
+        public List<MessageContent> Contents { get; set; } = new List<MessageContent>();
 
-        public List<ChatImageModel> ImageContent { get; set; } = new List<ChatImageModel> { };
+        public List<ToolCall>? ToolCalls { get; set; }
 
+        public string? ToolCallId { get; set; }
 
-        public (JObject body, int tokens) GetTokens (TikToken? tikToken)
+        public string? Name { get; set; }
+
+        public AudioOutputModel? AudioOutput { get; set; }
+
+        public JsonObject ToRequestBody()
         {
-            var body = MessageBody;
-            var textTokens = TokenUtils.GetTokensForSingleMessage(tikToken, body);
-
-            if (ImageContent != null)
+            var body = new JsonObject
             {
-                foreach (var item in ImageContent)
-                {
-                    textTokens += item.TokensCount;
-                }
-                
+                ["role"] = RoleToString(Role)
+            };
+
+            if (!string.IsNullOrWhiteSpace(Name))
+            {
+                body["name"] = Name;
             }
 
-
-            return (body, textTokens);
-        }
-
-        public JObject MessageBody
-        {
-            get
+            if (Role == RoleType.Tool)
             {
-                JToken messageBody = new JObject();
-                var j = new JArray();
-
-                if (!string.IsNullOrEmpty(TextContent))
+                body["content"] = GetTextContent() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(ToolCallId))
                 {
-                    j.Add(new JObject { { "type", "text" }, { "text", TextContent } });
+                    body["tool_call_id"] = ToolCallId;
                 }
-
-                if (ImageContent != null && ImageContent.Count > 0)
-                {
-                    foreach (ChatImageModel item in ImageContent)
-                    {
-                        JObject url = new JObject();
-                        url["url"] = item.Url;
-
-                        switch (item.Mode)
-                        {
-                            case ImageDetailMode.Auto:
-                                {
-                                    url["detail"] = "auto";
-                                    break;
-                                }
-                            case ImageDetailMode.Low:
-                                {
-                                    url["detail"] = "low";
-                                    break;
-                                }
-                            case ImageDetailMode.High:
-                                {
-                                    url["detail"] = "high";
-                                    break;
-                                }
-
-                        }
-
-                        //url["tokensCount"] = item.TokensCount;
-                        JObject imageContent = new JObject
-                                {
-                                    { "type", "image_url" },
-                                    { "image_url", url }
-                                };
-                        j.Add(imageContent);
-                    }
-
-                }
-                messageBody = j;
-
-                return new JObject() { { "role", Role == RoleType.User ? "user" : "assistant" }, { "content", messageBody } };
+                return body;
             }
+
+            if (ToolCalls != null && ToolCalls.Count > 0)
+            {
+                var toolCalls = new JsonArray();
+                foreach (var toolCall in ToolCalls.Select(t => t.ToJsonObject()))
+                {
+                    toolCalls.Add(toolCall);
+                }
+                body["tool_calls"] = toolCalls;
+            }
+
+            if (Contents == null || Contents.Count == 0)
+            {
+                body["content"] = string.Empty;
+                return body;
+            }
+
+            var contentArray = new JsonArray();
+            foreach (var content in Contents.Select(c => c.ToJsonObject()))
+            {
+                contentArray.Add(content);
+            }
+            body["content"] = contentArray;
+            return body;
         }
 
+        public static ChatMessage FromResponse(JsonObject message)
+        {
+            var role = ParseRole(message["role"]?.GetValue<string>());
+            var contents = MessageContent.FromJsonNode(message["content"]);
 
+            var toolCalls = message["tool_calls"] is JsonArray toolCallsArray
+                ? toolCallsArray
+                    .OfType<JsonObject>()
+                    .Select(ToolCall.FromJsonObject)
+                    .ToList()
+                : null;
 
-        
+            var audioOutput = message["audio"] is JsonObject audioObj
+                ? AudioOutputModel.FromJsonObject(audioObj)
+                : null;
+
+            return new ChatMessage
+            {
+                Role = role,
+                Contents = contents,
+                ToolCalls = toolCalls,
+                AudioOutput = audioOutput
+            };
+        }
+
+        public string? GetTextContent()
+        {
+            return MessageContent.ExtractText(Contents);
+        }
+
+        private static string RoleToString(RoleType role)
+        {
+            return role switch
+            {
+                RoleType.User => "user",
+                RoleType.Assistant => "assistant",
+                RoleType.System => "system",
+                RoleType.Tool => "tool",
+                _ => "user",
+            };
+        }
+
+        private static RoleType ParseRole(string? role)
+        {
+            return role switch
+            {
+                "assistant" => RoleType.Assistant,
+                "system" => RoleType.System,
+                "tool" => RoleType.Tool,
+                _ => RoleType.User,
+            };
+        }
 
     }
 
@@ -127,5 +145,8 @@ namespace ChatGPTSharp.Model
         public string? ConversationId { get; set; }
         public string? MessageId { get; set; }
         public string? Details { get; set; }
+        public List<ToolCall>? ToolCalls { get; set; }
+        public AudioOutputModel? AudioOutput { get; set; }
+        public List<MessageContent>? Contents { get; set; }
     }
 }

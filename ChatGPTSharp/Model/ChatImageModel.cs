@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using System.IO;
 
 
@@ -18,12 +17,7 @@ namespace ChatGPTSharp.Model
 
     public class ChatImageModel
     {
-        public string Url { get; set; }
-
-        /// <summary>
-        /// Only local file
-        /// </summary>
-        public int TokensCount { get; set; }
+        public string Url { get; set; } = string.Empty;
 
         public ImageDetailMode Mode { get; set; }
         
@@ -32,9 +26,6 @@ namespace ChatGPTSharp.Model
         {
             ChatImageModel chatImageContent = new ChatImageModel();
             string base64ImageRepresentation = Convert.ToBase64String(imageBytes);
-
-            var (width, height) = GetImageDimensions(imageBytes);
-            chatImageContent.TokensCount = CalculateImageTokens(width, height, imageDetailMode);
 
             chatImageContent.Mode = imageDetailMode;
             chatImageContent.Url = $"data:image/jpeg;base64,{base64ImageRepresentation}";
@@ -56,69 +47,31 @@ namespace ChatGPTSharp.Model
         }
 
 
-        public static (int width, int height) GetImageDimensions(byte[] imageBytes)
+        /// <summary>
+        /// Converts a file to a base64 string with a data URI prefix.
+        /// </summary>
+        /// <param name="filePath">The path to the file.</param>
+        /// <param name="mimeType">The MIME type of the file (e.g., "image/jpeg", "audio/mpeg").</param>
+        /// <returns>A base64 encoded string with data URI.</returns>
+        public static string ConvertFileToBase64(string filePath, string mimeType)
         {
-            using (MemoryStream ms = new MemoryStream(imageBytes))
+            if (string.IsNullOrWhiteSpace(filePath))
             {
-                using (Image image = Image.FromStream(ms))
-                {
-                    return (image.Width, image.Height);
-                }
+                throw new ArgumentException("File path cannot be null or whitespace.", nameof(filePath));
             }
+            if (!File.Exists(filePath))
+            {
+                throw new FileNotFoundException("File not found.", filePath);
+            }
+            if (string.IsNullOrWhiteSpace(mimeType))
+            {
+                throw new ArgumentException("MIME type cannot be null or whitespace.", nameof(mimeType));
+            }
+
+            byte[] fileBytes = File.ReadAllBytes(filePath);
+            string base64Representation = Convert.ToBase64String(fileBytes);
+            return $"data:{mimeType};base64,{base64Representation}";
         }
-
-        public static int CalculateImageTokens(int width, int height, ImageDetailMode detailMode)
-        {
-            const int lowDetailCost = 85;
-            const int highDetailCostPerSquare = 170;
-            const int highDetailBaseCost = 85;
-            const int maxDimension = 2048;
-            const int targetShortSide = 768;
-            const int squareSize = 512;
-
-
-            if (detailMode == ImageDetailMode.None)
-            {
-                detailMode = ImageDetailMode.High; //
-            }
-
-            if (detailMode == ImageDetailMode.Low)
-            {
-                return lowDetailCost;
-            }
-            else if (detailMode == ImageDetailMode.High)
-            {
-                bool scaledToMax = false;
-
-                // Scale down the image if either dimension exceeds the maximum allowed.
-                if (width > maxDimension || height > maxDimension)
-                {
-                    double scaleFactor = Math.Min((double)maxDimension / width, (double)maxDimension / height);
-                    width = (int)(width * scaleFactor);
-                    height = (int)(height * scaleFactor);
-                    scaledToMax = true;
-                }
-
-                // Further scale down the image only if it has been scaled in the previous step.
-                if (scaledToMax)
-                {
-                    double scaleToShortestSideFactor = (double)targetShortSide / Math.Min(width, height);
-                    width = (int)(width * scaleToShortestSideFactor);
-                    height = (int)(height * scaleToShortestSideFactor);
-                }
-
-                // Calculate how many 512px squares are needed to cover the image.
-                int squaresAcross = (int)Math.Ceiling((double)width / squareSize);
-                int squaresDown = (int)Math.Ceiling((double)height / squareSize);
-                int totalSquares = squaresAcross * squaresDown;
-
-                // Calculate final token cost for high detail images.
-                return highDetailCostPerSquare * totalSquares + highDetailBaseCost;
-            }
-
-            return lowDetailCost;
-        }
-
 
     }
 }

@@ -1,29 +1,29 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net.Http;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-using System.Text.RegularExpressions;
 using System.Diagnostics;
-using System.Xml.Linq;
-using ChatGPTSharp.Model;
-using System.Globalization;
-using System.Data;
+using System.Linq;
 using System.Net;
-using TiktokenSharp;
-using System.Runtime;
-using Newtonsoft.Json.Serialization;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using ChatGPTSharp.Model;
 using ChatGPTSharp.Utils;
 
 namespace ChatGPTSharp
 {
     public class ChatGPTClient
     {
-        private Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
-
+        private readonly Dictionary<string, Conversation> _conversationsCache = new Dictionary<string, Conversation>();
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
         public const string DefaultModel = "gpt-4o-mini";
 
@@ -31,50 +31,33 @@ namespace ChatGPTSharp
 
         public ChatGPTClientSettings Settings { get; private set; }
 
-        private TikToken? _tiktoken;
-
-        public bool IsDebug {
+        public bool IsDebug
+        {
             get { return Settings.IsDebug; }
             set { Settings.IsDebug = value; }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="openaiToken"></param>
-        /// <param name="modelName">text-davinci-003、gpt-3.5-turbo</param>
-        public ChatGPTClient(string openaiToken, string modelName = DefaultModel, string proxyUri = "", uint timeoutSeconds = DefaultTimeout)
+        public ChatGPTClient(string openAIKey, string modelName = DefaultModel, string proxyUri = "", uint timeoutSeconds = DefaultTimeout)
         {
             if (string.IsNullOrEmpty(modelName))
             {
                 throw new ChatGPTException("ModelName is null.");
             }
-            if (string.IsNullOrEmpty(openaiToken))
+            if (string.IsNullOrEmpty(openAIKey))
             {
-                throw new ChatGPTException("OpenAIToken is null.");
+                throw new ChatGPTException("OpenAIKey is null.");
             }
 
             ChatGPTClientSettings settings = new ChatGPTClientSettings()
-            { 
-                 ModelName = modelName,
-                 OpenAIToken = openaiToken,
-                 ProxyUri = proxyUri,
-                 TimeoutSeconds = timeoutSeconds
+            {
+                ModelName = modelName,
+                OpenAIKey = openAIKey,
+                ProxyUri = proxyUri,
+                TimeoutSeconds = timeoutSeconds
             };
-
-            try
-            {
-                _tiktoken = TikToken.EncodingForModel(settings.ModelName);
-            }
-            catch (Exception ex)
-            {
-                _tiktoken = null;
-                settings.DisableCheckTokens = true;
-            }
 
             Settings = settings;
         }
-
 
         public ChatGPTClient(ChatGPTClientSettings settings)
         {
@@ -82,27 +65,13 @@ namespace ChatGPTSharp
             {
                 throw new ChatGPTException("ModelName is null.");
             }
-            if (string.IsNullOrEmpty(settings.OpenAIToken))
+            if (string.IsNullOrEmpty(settings.OpenAIKey))
             {
-                throw new ChatGPTException("OpenAIToken is null.");
+                throw new ChatGPTException("OpenAIKey is null.");
             }
-
 
             Settings = settings;
-
-
-            try
-            {
-                _tiktoken = TikToken.EncodingForModel(settings.ModelName);
-            }
-            catch (Exception ex)
-            {
-                _tiktoken = null;
-                settings.DisableCheckTokens = true;
-            }
         }
-
-
 
         /// <summary>
         /// clear conversation
@@ -119,87 +88,71 @@ namespace ChatGPTSharp
             return false;
         }
 
-
+        public Task<ConversationResult> SendMessage(
+            string message,
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
+        {
+            var contents = new List<MessageContent> { MessageContent.FromText(message) };
+            return SendMessage(contents, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
 
         /// <summary>
-        /// SendMessage
+        /// Stateless chat call. Does not record conversation history.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="conversationId"></param>
-        /// <param name="parentMessageId"></param>
-        /// <param name="systemPrompt">https://platform.openai.com/docs/guides/chat </param>
-        /// <param name="images">set a local image file or an image URL; if it is a local image, it will be converted to base64 for transmission.</param>
-        /// <returns></returns>
-        public async Task<ConversationResult> SendMessage(string message, 
-            string conversationId = "", 
-            string parentMessageId = "", 
-            string systemPrompt = "", 
-            List<ChatImageModel>? images = null)
+        public async Task<ConversationResult> SendMessage(
+            List<MessageContent> contents,
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
         {
             try
             {
-                conversationId = !string.IsNullOrEmpty(conversationId) ? conversationId : Guid.NewGuid().ToString();
-                parentMessageId = !string.IsNullOrEmpty(parentMessageId) ? parentMessageId : Guid.NewGuid().ToString();
-
-                _conversationsCache.TryGetValue(conversationId, out Conversation conversation);
-                if (conversation == null)
-                {
-                    conversation = new Conversation
-                    {
-                        Messages = new List<ChatMessage>(),
-                        CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    };
-                }
-
-     
                 var userMessage = new ChatMessage
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    ParentMessageId = parentMessageId,
                     Role = RoleType.User,
-                    TextContent = message,
-                    ImageContent = images
+                    Contents = contents ?? new List<MessageContent>()
                 };
 
-                conversation.Messages.Add(userMessage);
-
-                JObject result = new JObject();
-                string? reply = string.Empty;
-                var resultJsonString = string.Empty;
-
-                var messages = BuildChatPayload(conversation.Messages, userMessage.Id, systemPrompt);
-                var data = await PostData(messages.message); //SendMessage
-                result = data.result;
-                reply = (string?)result.SelectToken("choices[0].message.content");
-                resultJsonString = data.source;
-
-                reply = reply?.Trim();
-
-                //TODO 重新计算userMessage中的token量？
-                //userMessage.
-
-
-                var replyMessage = new ChatMessage
+                var messages = new List<ChatMessage>();
+                if (!string.IsNullOrEmpty(systemPrompt))
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    ParentMessageId = userMessage.Id,
-                    Role = RoleType.Assistant,
-                    TextContent = reply,//Content = new JValue(reply),
-                    //UsageTokens = result.SelectToken("usage.completion_tokens")!.ToObject<int>(),
+                    messages.Add(new ChatMessage
+                    {
+                        Role = RoleType.System,
+                        Contents = new List<MessageContent> { MessageContent.FromText(systemPrompt) }
+                    });
+                }
+                messages.Add(userMessage);
+
+                var request = new ChatRequest
+                {
+                    Messages = messages,
+                    Tools = tools,
+                    ToolChoice = toolChoice,
+                    ExtraBody = extraBody
                 };
 
-                conversation.Messages.Add(replyMessage);
+                ChatResponse response = await SendAsync(request, cancellationToken);
 
-                _conversationsCache[conversationId] = conversation;
+                var replyMessage = response.Message ?? new ChatMessage
+                {
+                    Role = RoleType.Assistant
+                };
 
                 return new ConversationResult()
                 {
-                    Response = replyMessage.TextContent,
-                    ConversationId = conversationId,
-                    MessageId = replyMessage.Id,
-                    Details = resultJsonString
+                    Response = replyMessage.GetTextContent(),
+                    Details = response.Raw.ToJsonString(JsonOptions),
+                    ToolCalls = replyMessage.ToolCalls,
+                    AudioOutput = replyMessage.AudioOutput,
+                    Contents = replyMessage.Contents
                 };
-
             }
             catch (Exception ex)
             {
@@ -211,60 +164,493 @@ namespace ChatGPTSharp
 
                 throw;
             }
-
         }
-        private async Task<(JObject result, string source)> PostData(object obj)
+
+        /// <summary>
+        /// Stateful chat call with ConversationId and MessageId tracking.
+        /// </summary>
+        public Task<ConversationResult> SendMessageWithConversation(
+            string message,
+            string conversationId = "",
+            string parentMessageId = "",
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
         {
-            var httpClientHandler = new HttpClientHandler();
+            var contents = new List<MessageContent> { MessageContent.FromText(message) };
+            return SendMessageWithConversation(contents, conversationId, parentMessageId, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
 
-            if (!string.IsNullOrEmpty(Settings.ProxyUri))
+        public async Task<ConversationResult> SendMessageWithConversation(
+            List<MessageContent> contents,
+            string conversationId = "",
+            string parentMessageId = "",
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
             {
-                WebProxy proxy = new WebProxy(Settings.ProxyUri);
+                conversationId = !string.IsNullOrEmpty(conversationId) ? conversationId : Guid.NewGuid().ToString();
+                parentMessageId = !string.IsNullOrEmpty(parentMessageId) ? parentMessageId : Guid.NewGuid().ToString();
 
-                httpClientHandler.Proxy = proxy;
-                httpClientHandler.UseProxy = true;
+                _conversationsCache.TryGetValue(conversationId, out Conversation? conversation);
+                if (conversation == null)
+                {
+                    conversation = new Conversation
+                    {
+                        Messages = new List<ChatMessage>(),
+                        CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    };
+                }
+
+                var userMessage = new ChatMessage
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ParentMessageId = parentMessageId,
+                    Role = RoleType.User,
+                    Contents = contents ?? new List<MessageContent>()
+                };
+
+                conversation.Messages.Add(userMessage);
+
+                var request = new ChatRequest
+                {
+                    Messages = BuildChatMessages(conversation.Messages, userMessage.Id!, systemPrompt),
+                    Tools = tools,
+                    ToolChoice = toolChoice,
+                    ExtraBody = extraBody
+                };
+
+                ChatResponse response = await SendAsync(request, cancellationToken);
+
+                var replyMessage = response.Message ?? new ChatMessage
+                {
+                    Role = RoleType.Assistant
+                };
+
+                replyMessage.Id = Guid.NewGuid().ToString();
+                replyMessage.ParentMessageId = userMessage.Id;
+
+                conversation.Messages.Add(replyMessage);
+                _conversationsCache[conversationId] = conversation;
+
+                return new ConversationResult()
+                {
+                    Response = replyMessage.GetTextContent(),
+                    ConversationId = conversationId,
+                    MessageId = replyMessage.Id,
+                    Details = response.Raw.ToJsonString(JsonOptions),
+                    ToolCalls = replyMessage.ToolCalls,
+                    AudioOutput = replyMessage.AudioOutput,
+                    Contents = replyMessage.Contents
+                };
+            }
+            catch (Exception ex)
+            {
+                if (Settings.IsDebug)
+                {
+                    Console.WriteLine(ex);
+                    Debug.WriteLine(ex.ToString());
+                }
+
+                throw;
+            }
+        }
+
+        public Task<ResponseResult> CreateResponseAsync(
+            List<MessageContent> contents,
+            string? instructions = null,
+            IReadOnlyList<ResponseTool>? tools = null,
+            ResponseToolChoice? toolChoice = null,
+            bool? store = null,
+            string? conversationId = null,
+            string? previousResponseId = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
+        {
+            var input = MessageContent.BuildResponseInput(RoleType.User, contents ?? new List<MessageContent>());
+            var request = new ResponseRequest
+            {
+                Input = input,
+                Instructions = instructions,
+                Tools = tools,
+                ToolChoice = toolChoice,
+                Store = store,
+                ConversationId = conversationId,
+                PreviousResponseId = previousResponseId,
+                ExtraBody = extraBody
+            };
+
+            return CreateResponseAsync(request, cancellationToken);
+        }
+
+        public async Task<ResponseResult> CreateResponseAsync(ResponseRequest request, CancellationToken cancellationToken = default)
+        {
+            var body = BuildResponsesRequestBody(request, stream: false);
+            var data = await PostData(body, Settings.ResponsesUrl, cancellationToken);
+            var result = data.result;
+
+            return new ResponseResult
+            {
+                Id = GetString(result, "id"),
+                Model = GetString(result, "model"),
+                ConversationId = GetNodeByPath(result, "conversation.id")?.GetValue<string>()
+                    ?? GetString(result, "conversation_id"),
+                Output = result["output"] as JsonArray ?? new JsonArray(),
+                Raw = result
+            };
+        }
+
+        public async IAsyncEnumerable<ResponseStreamEvent> StreamResponseAsync(
+            ResponseRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var body = BuildResponsesRequestBody(request, stream: true);
+            await foreach (var chunk in StreamRawAsync(body, Settings.ResponsesUrl, cancellationToken))
+            {
+                var type = chunk["type"]?.GetValue<string>();
+                string? delta = null;
+
+                if (string.Equals(type, "response.output_text.delta", StringComparison.OrdinalIgnoreCase))
+                {
+                    delta = chunk["delta"]?.GetValue<string>();
+                }
+                else if (string.Equals(type, "response.output_text", StringComparison.OrdinalIgnoreCase))
+                {
+                    delta = chunk["text"]?.GetValue<string>();
+                }
+
+                yield return new ResponseStreamEvent
+                {
+                    Type = type,
+                    DeltaText = delta,
+                    Raw = chunk,
+                    IsDone = string.Equals(type, "response.completed", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(type, "response.failed", StringComparison.OrdinalIgnoreCase)
+                };
+            }
+        }
+
+        public async Task<ConversationInfo> CreateConversationAsync(
+            JsonArray? items = null,
+            IDictionary<string, object?>? metadata = null,
+            CancellationToken cancellationToken = default)
+        {
+            var body = new JsonObject();
+            if (items != null && items.Count > 0)
+            {
+                body["items"] = items;
+            }
+            if (metadata != null && metadata.Count > 0)
+            {
+                body["metadata"] = JsonSerializer.SerializeToNode(metadata, JsonOptions) as JsonObject;
             }
 
-            HttpClient client = new HttpClient(httpClientHandler);
-            client.Timeout = TimeSpan.FromSeconds(Settings.TimeoutSeconds);
+            var data = await PostData(body, Settings.ConversationsUrl, cancellationToken);
+            var result = data.result;
+            return new ConversationInfo
+            {
+                Id = GetString(result, "id"),
+                Raw = result
+            };
+        }
 
-            string uri = Settings.CompletionsUrl;
+        public async Task<JsonObject> AddConversationItemsAsync(
+            string conversationId,
+            JsonArray items,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(conversationId))
+            {
+                throw new ArgumentException("conversationId is null or empty.", nameof(conversationId));
+            }
+            if (items == null || items.Count == 0)
+            {
+                throw new ArgumentException("items is null or empty.", nameof(items));
+            }
+
+            var url = $"{Settings.ConversationsUrl}/{conversationId}/items";
+            var body = new JsonObject
+            {
+                ["items"] = items
+            };
+
+            var data = await PostData(body, url, cancellationToken);
+            return data.result;
+        }
+
+        public IAsyncEnumerable<ChatStreamEvent> SendMessageStream(
+            string message,
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
+        {
+            var contents = new List<MessageContent> { MessageContent.FromText(message) };
+            return SendMessageStream(contents, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
+
+        /// <summary>
+        /// Stateless streaming call. Does not record conversation history.
+        /// </summary>
+        public async IAsyncEnumerable<ChatStreamEvent> SendMessageStream(
+            List<MessageContent> contents,
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var messages = new List<ChatMessage>();
+            if (!string.IsNullOrEmpty(systemPrompt))
+            {
+                messages.Add(new ChatMessage
+                {
+                    Role = RoleType.System,
+                    Contents = new List<MessageContent> { MessageContent.FromText(systemPrompt) }
+                });
+            }
+
+            messages.Add(new ChatMessage
+            {
+                Role = RoleType.User,
+                Contents = contents ?? new List<MessageContent>()
+            });
+
+            var request = new ChatRequest
+            {
+                Messages = messages,
+                Tools = tools,
+                ToolChoice = toolChoice,
+                ExtraBody = extraBody
+            };
+
+            var replyMessageId = Guid.NewGuid().ToString();
+            var contentBuilder = new StringBuilder();
+            var toolCallAccumulator = new ToolCallAccumulator();
+
+            await foreach (var chunk in StreamRawAsync(request, cancellationToken))
+            {
+                var deltaText = GetNodeByPath(chunk, "choices[0].delta.content")?.GetValue<string>();
+                if (!string.IsNullOrEmpty(deltaText))
+                {
+                    contentBuilder.Append(deltaText);
+                }
+
+                if (GetNodeByPath(chunk, "choices[0].delta.tool_calls") is JsonArray toolCallsDelta)
+                {
+                    toolCallAccumulator.AddDelta(toolCallsDelta);
+                }
+
+                yield return new ChatStreamEvent
+                {
+                    MessageId = replyMessageId,
+                    DeltaText = deltaText,
+                    Raw = chunk,
+                    IsDone = false
+                };
+            }
+
+            yield return new ChatStreamEvent
+            {
+                MessageId = replyMessageId,
+                DeltaText = null,
+                    Raw = new JsonObject(),
+                    IsDone = true
+                };
+        }
+
+        /// <summary>
+        /// Stateful streaming call with ConversationId and MessageId tracking.
+        /// </summary>
+        public IAsyncEnumerable<ChatStreamEvent> SendMessageStreamWithConversation(
+            string message,
+            string conversationId = "",
+            string parentMessageId = "",
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            CancellationToken cancellationToken = default)
+        {
+            var contents = new List<MessageContent> { MessageContent.FromText(message) };
+            return SendMessageStreamWithConversation(contents, conversationId, parentMessageId, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
+
+        public async IAsyncEnumerable<ChatStreamEvent> SendMessageStreamWithConversation(
+            List<MessageContent> contents,
+            string conversationId = "",
+            string parentMessageId = "",
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            conversationId = !string.IsNullOrEmpty(conversationId) ? conversationId : Guid.NewGuid().ToString();
+            parentMessageId = !string.IsNullOrEmpty(parentMessageId) ? parentMessageId : Guid.NewGuid().ToString();
+
+            _conversationsCache.TryGetValue(conversationId, out Conversation? conversation);
+            if (conversation == null)
+            {
+                conversation = new Conversation
+                {
+                    Messages = new List<ChatMessage>(),
+                    CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                };
+            }
+
+            var userMessage = new ChatMessage
+            {
+                Id = Guid.NewGuid().ToString(),
+                ParentMessageId = parentMessageId,
+                Role = RoleType.User,
+                Contents = contents ?? new List<MessageContent>()
+            };
+
+            conversation.Messages.Add(userMessage);
+
+            var request = new ChatRequest
+            {
+                Messages = BuildChatMessages(conversation.Messages, userMessage.Id!, systemPrompt),
+                Tools = tools,
+                ToolChoice = toolChoice,
+                ExtraBody = extraBody
+            };
+
+            var replyMessageId = Guid.NewGuid().ToString();
+            var contentBuilder = new StringBuilder();
+            var toolCallAccumulator = new ToolCallAccumulator();
+
+            await foreach (var chunk in StreamRawAsync(request, cancellationToken))
+            {
+                var deltaText = GetNodeByPath(chunk, "choices[0].delta.content")?.GetValue<string>();
+                if (!string.IsNullOrEmpty(deltaText))
+                {
+                    contentBuilder.Append(deltaText);
+                }
+
+                if (GetNodeByPath(chunk, "choices[0].delta.tool_calls") is JsonArray toolCallsDelta)
+                {
+                    toolCallAccumulator.AddDelta(toolCallsDelta);
+                }
+
+                yield return new ChatStreamEvent
+                {
+                    ConversationId = conversationId,
+                    MessageId = replyMessageId,
+                    DeltaText = deltaText,
+                    Raw = chunk,
+                    IsDone = false
+                };
+            }
+
+            var replyMessage = new ChatMessage
+            {
+                Id = replyMessageId,
+                ParentMessageId = userMessage.Id,
+                Role = RoleType.Assistant,
+                Contents = contentBuilder.Length == 0
+                    ? new List<MessageContent>()
+                    : new List<MessageContent> { MessageContent.FromText(contentBuilder.ToString()) },
+                ToolCalls = toolCallAccumulator.Build()
+            };
+
+            conversation.Messages.Add(replyMessage);
+            _conversationsCache[conversationId] = conversation;
+
+            yield return new ChatStreamEvent
+            {
+                ConversationId = conversationId,
+                MessageId = replyMessageId,
+                DeltaText = null,
+                Raw = new JsonObject(),
+                IsDone = true
+            };
+        }
+
+        public async Task<ChatResponse> SendAsync(ChatRequest request, CancellationToken cancellationToken = default)
+        {
+            var body = BuildRequestBody(request, stream: false);
+            var data = await PostData(body, cancellationToken);
+            var result = data.result;
+
+            var messageToken = GetNodeByPath(result, "choices[0].message") as JsonObject;
+            var message = messageToken != null ? ChatMessage.FromResponse(messageToken) : null;
+
+            return new ChatResponse
+            {
+                Id = GetString(result, "id"),
+                Model = GetString(result, "model"),
+                Message = message,
+                Usage = result["usage"] as JsonObject,
+                Raw = result
+            };
+        }
+
+        public async IAsyncEnumerable<ChatStreamEvent> StreamAsync(
+            ChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await foreach (var chunk in StreamRawAsync(request, cancellationToken))
+            {
+                var deltaText = GetNodeByPath(chunk, "choices[0].delta.content")?.GetValue<string>();
+                yield return new ChatStreamEvent
+                {
+                    DeltaText = deltaText,
+                    Raw = chunk,
+                    IsDone = false
+                };
+            }
+
+            yield return new ChatStreamEvent
+            {
+                IsDone = true
+            };
+        }
+
+        private async Task<(JsonObject result, string source)> PostData(JsonObject body, CancellationToken cancellationToken)
+        {
+            return await PostData(body, Settings.CompletionsUrl, cancellationToken);
+        }
+
+        private async IAsyncEnumerable<JsonObject> StreamRawAsync(
+            ChatRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            var body = BuildRequestBody(request, stream: true);
+            await foreach (var chunk in StreamRawAsync(body, Settings.CompletionsUrl, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        private async Task<(JsonObject result, string source)> PostData(
+            JsonObject body,
+            string url,
+            CancellationToken cancellationToken)
+        {
+            using var client = CreateHttpClient();
+
             if (Settings.IsDebug)
             {
-                Console.WriteLine(uri);
-            }
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Settings.OpenAIToken}");
-
-            JObject req = new JObject();
-            req["model"] = Settings.ModelName;
-            req["temperature"] = Settings.Temperature;
-            req["top_p"] = Settings.TopP;
-            req["presence_penalty"] = Settings.PresencePenalty;
-            req["frequency_penalty"] = Settings.FrequencyPenalty;
-
-            //https://platform.openai.com/docs/guides/vision
-            //Currently, GPT-4 Turbo with vision does not support the message.name parameter,
-            //functions/tools, response_format parameter,
-            //and we currently set a low max_tokens default which you can override.
-            if (!Settings.DisableCheckTokens && Settings.MaxResponseTokens > 0)
-            {
-                req["max_tokens"] = Settings.MaxResponseTokens;
+                Console.WriteLine(url);
             }
 
-
-            req["messages"] = new JArray(((List<JObject>)obj).ToArray());
-
-            
-
-            var jsonString = req.ToString();
-
+            var jsonString = body.ToJsonString(JsonOptions);
             if (Settings.IsDebug)
             {
                 Console.WriteLine("req:" + jsonString);
             }
 
             var content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(uri, content);
+            var response = await client.PostAsync(url, content, cancellationToken);
             var resultJsonString = await response.Content.ReadAsStringAsync();
 
             if (Settings.IsDebug)
@@ -274,90 +660,355 @@ namespace ChatGPTSharp
 
             response.EnsureSuccessStatusCodeWithContent(resultJsonString);
 
-
-            JObject result = JObject.Parse(resultJsonString);
+            var node = JsonNode.Parse(resultJsonString) as JsonObject;
+            if (node == null)
+            {
+                throw new ChatGPTException("Invalid JSON response.");
+            }
+            JsonObject result = node;
             return (result, resultJsonString);
         }
 
-        public (List<JObject> message, int tokensCount) BuildChatPayload(List<ChatMessage> messages, string parentMessageId, string systemPrompt = "")
+        private async IAsyncEnumerable<JsonObject> StreamRawAsync(
+            JsonObject body,
+            string url,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
-            var payload = new List<JObject>();
-
-            if (Settings.DisableCheckTokens)
+            using var client = CreateHttpClient();
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
             {
-                if (!string.IsNullOrEmpty(systemPrompt))
-                {
-                    payload.Add(new JObject() { { "role", "system" }, { "content", systemPrompt } });
-                }
+                Content = new StringContent(body.ToJsonString(JsonOptions), Encoding.UTF8, "application/json")
+            };
 
-                foreach (var message in orderedMessages)
-                {
-                    payload.Add(message.GetTokens(_tiktoken).body);
-                }
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Settings.OpenAIKey);
 
-                return (payload, 0);
+            var response = await client.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                response.EnsureSuccessStatusCodeWithContent(errorContent);
             }
 
-            bool isFirstMessage = true;
+            using var stream = await response.Content.ReadAsStreamAsync();
+            using var reader = new System.IO.StreamReader(stream);
 
-            var systemPromptJson = new JObject() { { "role", "system" }, { "content", systemPrompt } };
-
-            int currentTokenCount = string.IsNullOrEmpty(systemPrompt) ?  0 : TokenUtils.GetTokensForSingleMessage(_tiktoken, systemPromptJson);
-
-            int maxTokenCount = Settings.MaxPromptTokens;
-            if (maxTokenCount <= 0)
+            while (!reader.EndOfStream)
             {
-                maxTokenCount = Settings.MaxContextTokens;
+                cancellationToken.ThrowIfCancellationRequested();
+                var line = await reader.ReadLineAsync();
+                if (line == null)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var data = line.Substring(5).Trim();
+                if (data == "[DONE]")
+                {
+                    yield break;
+                }
+
+                JsonObject? chunk = null;
+                try
+                {
+                    chunk = JsonNode.Parse(data) as JsonObject;
+                }
+                catch (JsonException)
+                {
+                    if (Settings.IsDebug)
+                    {
+                        Console.WriteLine("stream parse failed: " + data);
+                    }
+                }
+
+                if (chunk != null)
+                {
+                    yield return chunk;
+                }
+            }
+        }
+
+        private HttpClient CreateHttpClient()
+        {
+            var httpClientHandler = new HttpClientHandler();
+
+            if (!string.IsNullOrEmpty(Settings.ProxyUri))
+            {
+                WebProxy proxy = new WebProxy(Settings.ProxyUri);
+                httpClientHandler.Proxy = proxy;
+                httpClientHandler.UseProxy = true;
             }
 
-            while (currentTokenCount < maxTokenCount && orderedMessages.Count > 0)
+            var client = new HttpClient(httpClientHandler)
             {
-                var message = orderedMessages.Last();
-                orderedMessages.Remove(message);
+                Timeout = TimeSpan.FromSeconds(Settings.TimeoutSeconds)
+            };
 
-                var tokensResult = message.GetTokens(_tiktoken);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Settings.OpenAIKey);
+            return client;
+        }
 
-                int newTokenCount = tokensResult.tokens + currentTokenCount;
+        private JsonObject BuildRequestBody(ChatRequest request, bool stream)
+        {
+            var req = new JsonObject
+            {
+                ["model"] = request.Model ?? Settings.ModelName,
+                ["temperature"] = request.Temperature ?? Settings.Temperature,
+                ["top_p"] = request.TopP ?? Settings.TopP,
+                ["presence_penalty"] = request.PresencePenalty ?? Settings.PresencePenalty,
+                ["frequency_penalty"] = request.FrequencyPenalty ?? Settings.FrequencyPenalty
+            };
 
-                if (newTokenCount > maxTokenCount)
+            var messagesArray = new JsonArray();
+            foreach (var msg in request.Messages.Select(m => m.ToRequestBody()))
+            {
+                messagesArray.Add(msg);
+            }
+            req["messages"] = messagesArray;
+
+            if (request.Tools != null && request.Tools.Count > 0)
+            {
+                var toolsArray = new JsonArray();
+                foreach (var tool in request.Tools.Select(t => t.ToJsonObject()))
                 {
-                    if (!isFirstMessage)
+                    toolsArray.Add(tool);
+                }
+                req["tools"] = toolsArray;
+            }
+
+            if (request.ToolChoice != null)
+            {
+                var toolChoiceToken = request.ToolChoice.ToJsonNode();
+                if (toolChoiceToken != null)
+                {
+                    req["tool_choice"] = toolChoiceToken;
+                }
+            }
+
+            if (stream)
+            {
+                req["stream"] = true;
+            }
+
+            var mergedExtra = MergeExtraBody(Settings.ExtraBody, request.ExtraBody);
+            if (mergedExtra != null)
+            {
+                JsonNodeUtils.Merge(req, mergedExtra);
+            }
+
+            return req;
+        }
+
+        private JsonObject BuildResponsesRequestBody(ResponseRequest request, bool stream)
+        {
+            var req = new JsonObject
+            {
+                ["model"] = request.Model ?? Settings.ModelName
+            };
+
+            if (request.Input != null)
+            {
+                req["input"] = request.Input;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Instructions))
+            {
+                req["instructions"] = request.Instructions;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ConversationId))
+            {
+                req["conversation"] = request.ConversationId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PreviousResponseId))
+            {
+                req["previous_response_id"] = request.PreviousResponseId;
+            }
+
+            if (request.Store.HasValue)
+            {
+                req["store"] = request.Store.Value;
+            }
+
+            if (request.Tools != null && request.Tools.Count > 0)
+            {
+                var toolsArray = new JsonArray();
+                foreach (var tool in request.Tools.Select(t => t.ToJsonObject()))
+                {
+                    toolsArray.Add(tool);
+                }
+                req["tools"] = toolsArray;
+            }
+
+            if (request.ToolChoice != null)
+            {
+                var toolChoiceToken = request.ToolChoice.ToJsonNode();
+                if (toolChoiceToken != null)
+                {
+                    req["tool_choice"] = toolChoiceToken;
+                }
+            }
+
+            if (request.ParallelToolCalls.HasValue)
+            {
+                req["parallel_tool_calls"] = request.ParallelToolCalls.Value;
+            }
+
+            if (stream)
+            {
+                req["stream"] = true;
+            }
+
+            var mergedExtra = MergeExtraBody(Settings.ExtraBody, request.ExtraBody);
+            if (mergedExtra != null)
+            {
+                JsonNodeUtils.Merge(req, mergedExtra);
+            }
+
+            return req;
+        }
+
+        private static JsonObject? MergeExtraBody(
+            IDictionary<string, object?>? settingsExtra,
+            IDictionary<string, object?>? requestExtra)
+        {
+            var merged = ToJObject(settingsExtra);
+            var request = ToJObject(requestExtra);
+
+            if (merged == null)
+            {
+                return request;
+            }
+
+            if (request != null)
+            {
+                JsonNodeUtils.Merge(merged, request);
+            }
+
+            return merged;
+        }
+
+        private static JsonObject? ToJObject(IDictionary<string, object?>? data)
+        {
+            if (data == null || data.Count == 0)
+            {
+                return null;
+            }
+            return JsonSerializer.SerializeToNode(data, JsonOptions) as JsonObject;
+        }
+
+        private static string? GetString(JsonObject obj, string propertyName)
+        {
+            return obj[propertyName]?.GetValue<string>();
+        }
+
+        private static JsonNode? GetNodeByPath(JsonNode? node, string path)
+        {
+            if (node == null || string.IsNullOrEmpty(path))
+            {
+                return null;
+            }
+
+            var segments = path.Split('.');
+            JsonNode? current = node;
+
+            foreach (var segment in segments)
+            {
+                if (current == null)
+                {
+                    return null;
+                }
+
+                var part = segment;
+                while (true)
+                {
+                    var bracket = part.IndexOf('[');
+                    if (bracket < 0)
+                    {
+                        if (current is JsonObject obj)
+                        {
+                            current = obj[part];
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                        break;
+                    }
+
+                    var prop = part.Substring(0, bracket);
+                    if (!string.IsNullOrEmpty(prop))
+                    {
+                        if (current is JsonObject obj)
+                        {
+                            current = obj[prop];
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+
+                    if (current == null)
+                    {
+                        return null;
+                    }
+
+                    var end = part.IndexOf(']', bracket);
+                    if (end < 0)
+                    {
+                        return null;
+                    }
+
+                    var indexText = part.Substring(bracket + 1, end - bracket - 1);
+                    if (!int.TryParse(indexText, out var index))
+                    {
+                        return null;
+                    }
+
+                    if (current is JsonArray array)
+                    {
+                        current = index >= 0 && index < array.Count ? array[index] : null;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+
+                    if (end == part.Length - 1)
                     {
                         break;
                     }
-                    throw new Exception($"Prompt is too long. Max token count is {maxTokenCount}, but prompt is {newTokenCount} tokens long.");
+
+                    part = part.Substring(end + 1);
                 }
-
-                payload.Insert(0, tokensResult.body);
-
-                isFirstMessage = false;
-                currentTokenCount = newTokenCount;
             }
+
+            return current;
+        }
+
+        private static List<ChatMessage> BuildChatMessages(List<ChatMessage> messages, string parentMessageId, string systemPrompt = "")
+        {
+            var orderedMessages = GetMessagesForConversation(messages, parentMessageId);
+            var payload = new List<ChatMessage>();
 
             if (!string.IsNullOrEmpty(systemPrompt))
             {
-                payload.Insert(payload.Count - 1, systemPromptJson);
+                payload.Add(new ChatMessage
+                {
+                    Role = RoleType.System,
+                    Contents = new List<MessageContent> { MessageContent.FromText(systemPrompt) }
+                });
             }
 
-            //from documentation https://platform.openai.com/docs/guides/text-generation/managing-tokens 
-            currentTokenCount += 2;
-
-            //I tested using the method in the documentation and found that the token count calculated using the algorithm in the documentation
-            //is inconsistent with the prompt_tokens returned. I'm not sure if the documentation was not updated in time or if there is another issue.
-            //After adding the following code, it seems to be consistent with prompt_tokens.
-            currentTokenCount = currentTokenCount  - (payload.Count - 1);
-
-            if (Settings.IsDebug)
-            {
-                Console.WriteLine($"[Prompt Tokens]:{currentTokenCount} MsgCount:{payload.Count}");
-            }
-            return (payload, currentTokenCount);
+            payload.AddRange(orderedMessages);
+            return payload;
         }
-
-
-
-        
 
         private static List<ChatMessage> GetMessagesForConversation(List<ChatMessage> messages, string parentMessageId)
         {
@@ -365,7 +1016,7 @@ namespace ChatGPTSharp
             string? currentMessageId = parentMessageId;
             while (currentMessageId != null)
             {
-                ChatMessage message = messages.Find(m => m.Id == currentMessageId);
+                ChatMessage? message = messages.Find(m => m.Id == currentMessageId);
                 if (message == null)
                 {
                     break;
@@ -375,12 +1026,79 @@ namespace ChatGPTSharp
             }
             return orderedMessages;
         }
-   
 
+        private sealed class ToolCallAccumulator
+        {
+            private readonly Dictionary<int, ToolCallBuilder> _builders = new Dictionary<int, ToolCallBuilder>();
 
+            public void AddDelta(JsonArray toolCallsDelta)
+            {
+                foreach (var token in toolCallsDelta.OfType<JsonObject>())
+                {
+                    int index = token["index"]?.GetValue<int>() ?? 0;
+                    if (!_builders.TryGetValue(index, out var builder))
+                    {
+                        builder = new ToolCallBuilder();
+                        _builders[index] = builder;
+                    }
 
+                    var id = token["id"]?.GetValue<string>();
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        builder.Id = id;
+                    }
 
+                    var type = token["type"]?.GetValue<string>();
+                    if (!string.IsNullOrEmpty(type))
+                    {
+                        builder.Type = type;
+                    }
 
+                    var function = token["function"] as JsonObject;
+                    if (function != null)
+                    {
+                        var name = function["name"]?.GetValue<string>();
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            builder.Name = name;
+                        }
 
+                        var arguments = function["arguments"]?.GetValue<string>();
+                        if (!string.IsNullOrEmpty(arguments))
+                        {
+                            builder.Arguments.Append(arguments);
+                        }
+                    }
+                }
+            }
+
+            public List<ToolCall>? Build()
+            {
+                if (_builders.Count == 0)
+                {
+                    return null;
+                }
+
+                var calls = new List<ToolCall>();
+                foreach (var entry in _builders.OrderBy(e => e.Key))
+                {
+                    var builder = entry.Value;
+                    var id = builder.Id ?? string.Empty;
+                    var type = builder.Type ?? "function";
+                    var name = builder.Name ?? string.Empty;
+                    var arguments = builder.Arguments.ToString();
+                    calls.Add(new ToolCall(id, type, new ToolFunctionCall(name, arguments)));
+                }
+                return calls;
+            }
+        }
+
+        private sealed class ToolCallBuilder
+        {
+            public string? Id { get; set; }
+            public string? Type { get; set; }
+            public string? Name { get; set; }
+            public StringBuilder Arguments { get; } = new StringBuilder();
+        }
     }
 }
