@@ -19,6 +19,11 @@ namespace ChatGPTSharp.Model
         public string? Url { get; set; }
         public ImageDetailMode Detail { get; set; } = ImageDetailMode.None;
 
+        public static implicit operator MessageContent(string text)
+        {
+            return FromText(text);
+        }
+
         public static MessageContent FromText(string text)
         {
             return new MessageContent { Type = MessageContentType.Text, Text = text };

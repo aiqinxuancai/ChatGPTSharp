@@ -57,6 +57,24 @@ var second = await client.SendMessageWithConversation(
 Console.WriteLine(second.Response);
 ```
 
+## Simplified Usage (Session)
+
+Use `CreateSession` to keep state without manually passing `ConversationId` and `MessageId`.
+It also supports a simplified content call without building `List<MessageContent>`.
+
+```csharp
+var session = client.CreateSession(systemPrompt: "You are a concise assistant.");
+
+var first = await session.SendAsync("Hello!");
+var second = await session.SendAsync("Continue the conversation.");
+
+var multimodal = await session.SendAsync(
+    "Describe this image.",
+    MessageContent.FromImageUrl("https://example.com/demo.png"));
+
+Console.WriteLine(second.Response);
+```
+
 ## System Prompt
 
 ```csharp

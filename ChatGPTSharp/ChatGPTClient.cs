@@ -73,6 +73,15 @@ namespace ChatGPTSharp
             Settings = settings;
         }
 
+        public ChatSession CreateSession(
+            string systemPrompt = "",
+            IReadOnlyList<ToolDefinition>? tools = null,
+            ToolChoice? toolChoice = null,
+            IDictionary<string, object?>? extraBody = null)
+        {
+            return new ChatSession(this, systemPrompt, tools, toolChoice, extraBody);
+        }
+
         /// <summary>
         /// clear conversation
         /// </summary>
@@ -98,6 +107,11 @@ namespace ChatGPTSharp
         {
             var contents = new List<MessageContent> { MessageContent.FromText(message) };
             return SendMessage(contents, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
+
+        public Task<ConversationResult> SendMessage(params MessageContent[] contents)
+        {
+            return SendMessage(contents?.ToList() ?? new List<MessageContent>());
         }
 
         /// <summary>
@@ -181,6 +195,11 @@ namespace ChatGPTSharp
         {
             var contents = new List<MessageContent> { MessageContent.FromText(message) };
             return SendMessageWithConversation(contents, conversationId, parentMessageId, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
+
+        public Task<ConversationResult> SendMessageWithConversation(params MessageContent[] contents)
+        {
+            return SendMessageWithConversation(contents?.ToList() ?? new List<MessageContent>());
         }
 
         public async Task<ConversationResult> SendMessageWithConversation(
@@ -396,6 +415,11 @@ namespace ChatGPTSharp
             return SendMessageStream(contents, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
         }
 
+        public IAsyncEnumerable<ChatStreamEvent> SendMessageStream(params MessageContent[] contents)
+        {
+            return SendMessageStream(contents?.ToList() ?? new List<MessageContent>());
+        }
+
         /// <summary>
         /// Stateless streaming call. Does not record conversation history.
         /// </summary>
@@ -481,6 +505,11 @@ namespace ChatGPTSharp
         {
             var contents = new List<MessageContent> { MessageContent.FromText(message) };
             return SendMessageStreamWithConversation(contents, conversationId, parentMessageId, systemPrompt, tools, toolChoice, extraBody, cancellationToken);
+        }
+
+        public IAsyncEnumerable<ChatStreamEvent> SendMessageStreamWithConversation(params MessageContent[] contents)
+        {
+            return SendMessageStreamWithConversation(contents?.ToList() ?? new List<MessageContent>());
         }
 
         public async IAsyncEnumerable<ChatStreamEvent> SendMessageStreamWithConversation(

@@ -57,6 +57,24 @@ var second = await client.SendMessageWithConversation(
 Console.WriteLine(second.Response);
 ```
 
+## 简化写法（Session）
+
+使用 `CreateSession` 自动维护会话状态，无需手动传递 `ConversationId` 和 `MessageId`。
+同时支持更简洁的内容调用，不必手动构造 `List<MessageContent>`。
+
+```csharp
+var session = client.CreateSession(systemPrompt: "你是一个非常简洁的助手。");
+
+var first = await session.SendAsync("你好！");
+var second = await session.SendAsync("继续聊下去。");
+
+var multimodal = await session.SendAsync(
+    "描述这张图片。",
+    MessageContent.FromImageUrl("https://example.com/demo.png"));
+
+Console.WriteLine(second.Response);
+```
+
 ## System Prompt
 
 ```csharp
